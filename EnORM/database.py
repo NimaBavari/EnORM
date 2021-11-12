@@ -1,263 +1,181 @@
-"""Module for containing the DBConnection class."""
+"""Module docstring here."""
 
-import sqlite3
+from __future__ import annotations
+
+from types import TracebackType
+from typing import Any, Dict, Iterator, List, Type, Union
+
+import pyodbc
+
+from .model import Model
+from .structures import Key, Label
 
 
-class DBConnection:
-    """Creates a DBConnection object.
+class DBSession:
+    """Docstring here."""
 
-    Instance of this class is a singleton object, i.e., only one instance may
-    be taken from this class.
-
-    Note that this class should be only instantiated with context manager.
-
-        :params
-            db_url      ->  absolute path of the db file, as a string; if not
-                            exists, will be created automatically.
-    """
-
-    _db = None
     _instance = None
-    _conn = None
-    _cursor = None
 
-    def __init__(self, db_url):
-        type(self)._db = db_url
-        try:
-            self._connect()
-        except sqlite3.DatabaseError as e:
-            print('Error: %s' % e)
+    def __new__(cls, *args: Any, **kwargs: Any) -> DBSession:
+        if not isinstance(cls._instance, cls):
+            cls._instance = cls(*args, **kwargs)
+        return cls._instance
 
-    def __enter__(self):
-        # Makes sure the connection is obtained.
-        return self.instance
+    def __init__(self, conn_str: str) -> None:
+        self.engine = DBEngine(conn_str)
+        self._conn = self.engine.connect()
+        self._cursor = self._conn.cursor()
+        self.queue: List[Model] = []
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        # Makes sure the connection is safely closed.
-        if self._conn:
-            self._conn.commit()
-            self._cursor.close()
-            self._conn.close()
-            self._instance = None
-
-    @classmethod
-    def _connect(cls):
-        # Prepares the connection and cursor objects.
-        cls._conn = sqlite3.connect(cls._db)
-        cls._cursor = cls._conn.cursor()
-
-    @property
-    def instance(self):
-        # Makes sure the class is instantiated only once.
-        if not self._instance:
-            self._instance = DBConnection(type(self)._db)
+    def __enter__(self) -> DBSession:
         return self._instance
 
-    @staticmethod
-    def group(query, group_by):
-        # Manages GROUP BY syntax
-        if query.endswith(";"):
-            query = query[:-1]
-        query += " GROUP BY " + ", ".join(group_by) + ";"
-        return query
+    def __exit__(
+        self,
+        exc_type: Union[type[BaseException], None],
+        exc_value: Union[BaseException, None],
+        traceback: Union[TracebackType, None],
+    ) -> None:
+        if self._conn:
+            try:
+                self.commit()
+            except exc_type:
+                self._conn.rollback()
+                raise
+            finally:
+                self._cursor.close()
+                self._conn.close()
+                self._instance = None
 
-    @staticmethod
-    def order(query, order_by):
-        # Manages ORDER BY and DESC syntax
-        if query.endswith(";"):
-            query = query[:-1]
-        query += " ORDER BY "
-        fds = []
-        for col in order_by:
-            fd = "%s" % col['name']
-            if col['desc']:
-                fd += " DESC"
-            fds.append(fd)
-        query += ", ".join(fds) + ";"
-        return query
+    def __iter__(self) -> Iterator[Model]:
+        yield from self.queue
 
-    @staticmethod
-    def put_limit(query, limit):
-        # Manages LIMIT syntax
-        if query.endswith(";"):
-            query = query[:-1]
-        query += " LIMIT %d;" % limit
-        return query
+    def query(self, *fields: Union[Type, Key, Label]) -> Query:
+        return Query(*fields, session=self)
 
-    @staticmethod
-    def put_offset(query, offset):
-        # Manages OFFSET syntax
-        if query.endswith(";"):
-            query = query[:-1]
-        query += " OFFSET %d;" % offset
-        return query
+    def save(self, obj: Model) -> None:
+        self.queue.append(obj)
 
-    def create_table(self, table):
-        """Creates table in database. Returns void.
-            :params
-                table   ->  Table object
-        """
-        query = "CREATE TABLE IF NOT EXISTS %s(%s);" % (table.name, table.desc)
-        self._cursor.execute(query)
+    def commit(self) -> None:
+        for itm in self:
+            self._cursor.execute(itm.sql, *itm.attrs.values())
+        self._conn.commit()
 
-    def drop_table(self, table):
-        """Drops table from database. Returns void.
-            :params
-                table   ->  Table object
-        """
-        query = "DROP TABLE IF EXISTS %s;" % table.name
-        self._cursor.execute(query)
 
-    def delete(self, table, col, val, limit=None, offset=None):
-        """Deletes rows from table within given condition, limit and offset.
-        Returns void.
-            :params
-                table   ->  name of the table, as a string
-                col     ->  name of the column, as a string
-                val     ->  value of the column
-                limit   ->  optional; limit of rows to be deleted, as an
-                            integer; defaults to None
-                offset  ->  optional; offset of rows to be deleted, as an
-                            integer; defaults to None
-        """
-        query = "DELETE FROM %s WHERE %s = :val;" % (table, col)
-        if limit:
-            query = self.put_limit(query, limit)
-        if offset:
-            query = self.put_offset(query, offset)
-        self._cursor.execute(query, {'val': val})
+class DBEngine:
+    """Docstring here."""
 
-    def update(self, table, cols, data, conds, vals, limit=None, offset=None):
-        """Updates certain cells of certain rows in a table within given
-        conditions, limit and offset. Returns void.
-            :params
-                table   ->  name of the table, as a string
-                cols    ->  columns to be updated, as a list of strings
-                data    ->  values columns to be set to, as a list of strings
-                conds   ->  columns to be bounded, as a list of strings
-                vals    ->  values columns bounded with, as a list
-                limit   ->  optional; limit of rows to be updated, as an
-                            integer; defaults to None
-                offset  ->  optional; offset of rows to be updated, as an
-                            integer; defaults to None
-        """
-        col_vals = [col + "col" for col in cols]
-        cond_vals = [cond + "val" for cond in conds]
-        changes = ", ".join([col + " = :" + col_val for col, col_val
-                             in zip(cols, col_vals)])
-        clause = " AND ".join([cond + " = :" + cond_val for cond, cond_val
-                               in zip(conds, cond_vals)])
-        query = "UPDATE %s SET %s WHERE %s;" % (table, changes, clause)
-        if limit:
-            query = self.put_limit(query, limit)
-        if offset:
-            query = self.put_offset(query, offset)
-        plch = {**dict(zip(col_vals, data)), **dict(zip(cond_vals, vals))}
-        self._cursor.execute(query, plch)
+    def __init__(self, conn_str: str) -> None:
+        self.conn_str = conn_str
 
-    def get_all(self, table, cols, conds=None, vals=None, group_by=None,
-                order_by=None, limit=None, offset=None):
-        """Fetches certain cells of certain rows in a table within given
-        conditions, limit and offset, grouped by and ordered by any sets of
-        columns. Returns a list of tuples.
-            :params
-                table       ->  name of the table, as a string
-                cols        ->  columns to be fetched, as a list of strings
-                conds       ->  optional; columns to be bounded, as a list of
-                                strings; defaults to None
-                vals        ->  optional; values columns bounded with, as a
-                                list; defaults to None
-                group_by    ->  optional; columns to be grouped by, as a list
-                                of strings; defaults to None
-                order_by    ->  optional; columns to be ordered by, as a list
-                                of dictionaries; defaults to None
-                limit       ->  optional; limit of rows to be fetched, as an
-                                integer; defaults to None
-                offset      ->  optional; offset of rows to be fetched, as an
-                                integer; defaults to None
-        """
-        if conds:
-            clause = " AND ".join([cond + " = :" + cond for cond in conds])
-            clms = ", ".join(cols)
-            query = "SELECT %s FROM %s WHERE %s;" % (clms, table, clause)
-            plch = dict(zip(conds, vals))
-            if group_by:
-                query = self.group(query, group_by)
-            if order_by:
-                query = self.order(query, order_by)
-            if limit:
-                query = self.put_limit(query, limit)
-            if offset:
-                query = self.put_offset(query, offset)
-            self._cursor.execute(query, plch)
-        else:
-            clms = ", ".join(cols)
-            query = "SELECT %s FROM %s;" % (clms, table)
-            if group_by:
-                query = self.group(query, group_by)
-            if order_by:
-                query = self.order(query, order_by)
-            if limit:
-                query = self.put_limit(query, limit)
-            if offset:
-                query = self.put_offset(query, offset)
-            self._cursor.execute(query)
-        return self._cursor.fetchall()
+    def connect(self) -> pyodbc.Connection:
+        return pyodbc.connect(self.conn_str)
 
-    def get_first(self, table, cols,
-                  conds=None, vals=None, group_by=None, first_col="ID"):
-        """Fetches certain cells of the first row in a table within given
-        conditions, grouped by and ordered by any sets of columns. Returns a
-        tuple.
-            :params
-                table       ->  name of the table, as a string
-                cols        ->  columns to be fetched, as a list of strings
-                conds       ->  optional; columns to be bounded, as a list of
-                                strings; defaults to None
-                vals        ->  optional; values columns bounded with, as a
-                                list; defaults to None
-                group_by    ->  optional; columns to be grouped by, as a list
-                                of strings; defaults to None
-                first_col   ->  optional; index column, as a string; defaults
-                                to "ID"
-        """
-        ord_dict = [{'name': first_col, 'desc': False}]
-        return self.get_all(table, cols, conds, vals, group_by, ord_dict, 1)[0]
 
-    def get_last(self, table, cols,
-                 conds=None, vals=None, group_by=None, first_col="ID"):
-        """Fetches certain cells of the last row in a table within given
-        conditions, grouped by and ordered by any sets of columns. Returns a
-        tuple.
-            :params
-                table       ->  name of the table, as a string
-                cols        ->  columns to be fetched, as a list of strings
-                conds       ->  optional; columns to be bounded, as a list of
-                                strings; defaults to None
-                vals        ->  optional; values columns bounded with, as a
-                                list; defaults to None
-                group_by    ->  optional; columns to be grouped by, as a list
-                                of strings; defaults to None
-                first_col   ->  optional; index column, as a string; defaults
-                                to "ID"
-        """
-        ord_dict = [{'name': first_col, 'desc': True}]
-        return self.get_all(table, cols, conds, vals, group_by, ord_dict, 1)[0]
+class Query:
+    """Docstring here."""
 
-    def insert(self, table, data, cols=None):
-        """Inserts a row of data into the specified columns of a table. If
-        no columns specified, insert a row of data into all of the columns.
-        Returns void.
-            :params
-                table   ->  name of the table, as a string
-                data    ->  values for columns, as a list
-                cols    ->  optional; names of these columns; defaults to None
-        """
-        clause = ", ".join([":%s" % dat for dat in data])
-        plch = dict(zip([str(dat) for dat in data], data))
-        if cols:
-            clms = ", ".join(cols)
-            query = "INSERT INTO %s(%s) VALUES (%s);" % (table, clms, clause)
-        else:
-            query = "INSERT INTO %s VALUES (%s);" % (table, clause)
-        self._cursor.execute(query, plch)
+    def __init__(self, *entities: Union[Type, Key, Label], session: DBSession) -> None:
+        # NOTE: When `all`, `one`, etc. methods (the final methods) are
+        # implemented, we need to convert the list of tuples into the list of
+        # `Record` objects.
+        self.entities = entities
+        self.session = session
+        self.data: Dict[str, Any] = {}
+        if not self.entities:
+            raise ValueError("No fields specified for querying.")
+
+        if sum(isinstance(item, type) for item in self.entities) > 1:
+            raise ValueError("More than one model specified in the query.")
+
+        for item in self.entities:
+            # TODO: Implement functions within query
+            if isinstance(item, type):
+                self._add_to_data("select", "*")
+                self._add_to_data("from", item.get_table_name())
+            elif isinstance(item, Key):
+                try:
+                    self._add_to_data(
+                        "select",
+                        next(k for k, v in item.model.__dict__.items() if v is item),
+                    )
+                except (AttributeError, StopIteration):
+                    raise ValueError("Column name not found.")
+                self._add_to_data("from", item.model.get_table_name())
+            elif isinstance(item, Label):
+                denotee = item.denotee
+                if isinstance(denotee, type):
+                    self._add_to_data("select", "*")
+                    self._add_to_data("from", denotee.get_table_name())
+                    self._add_to_data("from_as", item.text)
+                elif isinstance(denotee, Key):
+                    try:
+                        self._add_to_data(
+                            "select",
+                            next(k for k, v in denotee.model.__dict__.items() if v is item),
+                        )
+                    except (AttributeError, StopIteration):
+                        raise ValueError("Column name not found.")
+                    self._add_to_data("from", denotee.model.get_table_name())
+                    self._add_to_data("select_as", item.text)
+            else:
+                raise TypeError("Wrong query format.")
+
+    def _add_to_data(self, key: str, val: Any) -> None:
+        # TODO: Determine the exact type of `val`; this will also replace the
+        # type in self.data attribute.
+        self.data[key] = [*self.data.get(key, []), val]
+
+    def where(self, expr):
+        # add where logic to `self.data`
+        return self
+
+    def join(self, model_cls):
+        # add join logic to `self.data`
+        return self
+
+    def having(self, expr):
+        # add having logic to `self.data`
+        return self
+
+    def group_by(self, *columns):
+        # add group_by logic to `self.data`
+        return self
+
+    def order_by(self, expr):
+        # add order_by logic to `self.data`
+        return self
+
+    def limit(self, value):
+        # add limit logic to `self.data`
+        return self
+
+    def offset(self, value):
+        return self
+
+    def slice(self, start, stop):
+        pass
+
+    def sql(self):
+        return SQLBuilder(self.data)
+
+    def all(self):
+        pass
+
+    def first(self):
+        pass
+
+    def one_or_none(self):
+        pass
+
+    def update(self, **fields_values):
+        pass
+
+    def delete(self):
+        pass
+
+
+class SQLBuilder:
+    """Docstring here."""
+
+    pass
