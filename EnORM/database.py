@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Dict, Iterator, List, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
@@ -27,14 +27,14 @@ class DBSession:
         self._cursor = self._conn.cursor()
         self.queue: List[Model] = []
 
-    def __enter__(self) -> DBSession:
+    def __enter__(self) -> Optional[DBSession]:
         return self._instance
 
     def __exit__(
         self,
-        exc_type: Union[type[BaseException], None],
-        exc_value: Union[BaseException, None],
-        traceback: Union[TracebackType, None],
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
     ) -> None:
         if self._conn:
             try:
@@ -81,7 +81,7 @@ class Query:
         # `Record` objects.
         self.entities = entities
         self.session = session
-        self.data: Dict[str, Any] = {}
+        self.data: Dict[str, List[Any]] = {}
         if not self.entities:
             raise ValueError("No fields specified for querying.")
 
@@ -103,7 +103,7 @@ class Query:
                     raise ValueError("Column name not found.")
                 self._add_to_data("from", item.model.get_table_name())
             elif isinstance(item, Label):
-                denotee = item.denotee
+                denotee: Union[Type, Key] = item.denotee
                 if isinstance(denotee, type):
                     self._add_to_data("select", "*")
                     self._add_to_data("from", denotee.get_table_name())
@@ -121,9 +121,7 @@ class Query:
             else:
                 raise TypeError("Wrong query format.")
 
-    def _add_to_data(self, key: str, val: Any) -> None:
-        # TODO: Determine the exact type of `val`; this will also replace the
-        # type in self.data attribute.
+    def _add_to_data(self, key: str, val: str) -> None:
         self.data[key] = [*self.data.get(key, []), val]
 
     def where(self, expr):

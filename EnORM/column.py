@@ -1,10 +1,14 @@
+from typing import Type
+
 from .structures import Key
 
 
 class Column(Key):
     """Docstring here."""
 
-    def __init__(self, type_, *, primary_key=False, default=False, nullable=False):
+    def __init__(
+        self, type_: Type, *, primary_key: bool = False, default: bool = False, nullable: bool = False
+    ) -> None:
         self.type = type_
         self.primary_key = primary_key
         self.default = default
