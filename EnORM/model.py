@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from .tags import Key, Label
-from .types import String
+from .column import Column, Label
+from .types import Integer, String
 
 
 class Model:
@@ -12,7 +12,7 @@ class Model:
     __table__ = None
     __TYPES = {
         # TODO: Fill this with type conversions
-        int: "INTEGER",
+        Integer: "INTEGER",
         String: "VARCHAR",
     }
 
@@ -56,7 +56,7 @@ class Model:
             raise ValueError("Cannot call without field name %s" % field)
 
     @classmethod
-    def get_fields(cls) -> Dict[str, Key]:
+    def get_fields(cls) -> Dict[str, Column]:
         return {key: val for key, val in cls.__dict__.items() if not key.startswith("__") and not callable(key)}
 
     @classmethod
@@ -64,13 +64,18 @@ class Model:
         return cls.__table__ or "%ss" % cls.__qualname__.lower()
 
     @classmethod
-    def get_type_pref(cls, field: str, val: Key) -> str:
-        # TODO: add foreign key logic too
+    def get_type_pref(cls, field: str, val: Column) -> str:
         type_pref = cls.__TYPES[val.type]
         if val.type.length is not None:
             type_pref += " %d" % val.type.length
         if val.primary_key:
             type_pref += " AUTOINCREMENT PRIMARY KEY"
+        if val.default:
+            type_pref += " DEFAULT %s" % val.default
+        if not val.nullable:
+            type_pref += " NOT NULL"
+        if val.rel:
+            pass  # TODO: add foreign key logic too
         return "%s %s" % (field, type_pref)
 
     @classmethod

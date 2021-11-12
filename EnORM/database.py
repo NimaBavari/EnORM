@@ -5,9 +5,9 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
+from .column import Column, Label
 from .internals import DBEngine, SQLBuilder
 from .model import Model
-from .tags import Key, Label
 
 
 class DBSession:
@@ -49,7 +49,7 @@ class DBSession:
     def __iter__(self) -> Iterator[Model]:
         yield from self.queue
 
-    def query(self, *fields: Union[Type, Key, Label]) -> Query:
+    def query(self, *fields: Union[Type, Column, Label]) -> Query:
         return Query(*fields, session=self)
 
     def save(self, obj: Model) -> None:
@@ -64,7 +64,7 @@ class DBSession:
 class Query:
     """Docstring here."""
 
-    def __init__(self, *entities: Union[Type, Key, Label], session: DBSession) -> None:
+    def __init__(self, *entities: Union[Type, Column, Label], session: DBSession) -> None:
         # NOTE: When `all`, `one`, etc. methods (the final methods) are
         # implemented, we need to convert the list of tuples into the list of
         # `Record` objects.
@@ -82,7 +82,7 @@ class Query:
             if isinstance(item, type):
                 self._add_to_data("select", "*")
                 self._add_to_data("from", item.get_table_name())
-            elif isinstance(item, Key):
+            elif isinstance(item, Column):
                 try:
                     self._add_to_data(
                         "select",
@@ -92,12 +92,12 @@ class Query:
                     raise ValueError("Column name not found.")
                 self._add_to_data("from", item.model.get_table_name())
             elif isinstance(item, Label):
-                denotee: Union[Type, Key] = item.denotee
+                denotee: Union[Type, Column] = item.denotee
                 if isinstance(denotee, type):
                     self._add_to_data("select", "*")
                     self._add_to_data("from", denotee.get_table_name())
                     self._add_to_data("from_as", item.text)
-                elif isinstance(denotee, Key):
+                elif isinstance(denotee, Column):
                     try:
                         self._add_to_data(
                             "select",

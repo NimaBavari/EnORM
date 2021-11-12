@@ -21,3 +21,7 @@ class SQLBuilder:
 
     def parse(self) -> str:
         return "Parsed value"  # TODO: implement this
+
+
+class Record:
+    """Docstring here."""

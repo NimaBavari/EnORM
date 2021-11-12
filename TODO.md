@@ -8,7 +8,7 @@
 * [x] Transactions approach
 * [x] Implement models
 * [ ] Write custom exception classes
-* [ ] Implement columns
+* [x] Implement columns
 * [ ] Implement foreign keys
 * [ ] Implement migrations
 * [ ] Add documentation
