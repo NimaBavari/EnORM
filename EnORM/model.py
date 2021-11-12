@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from .structures import Key, Label
+from .tags import Key, Label
 from .types import String
 
 
@@ -35,7 +35,7 @@ class Model:
         for v in fields.values():
             v.model = cls
 
-    def __init__(self, **attrs: Key) -> None:
+    def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
         fields = self.get_fields()
         for key, value in self.attrs.items():

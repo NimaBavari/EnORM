@@ -3,8 +3,7 @@
 * [x] Improve the singleton object to have a more conventional structure
 * [x] Add typing
 * [ ] Add docstrings: module level, class level, function level and method level
-* [ ] Have an SQLBuilder object to have added a middle layer of complexity in between
-    * [ ] Have a more expansive SQLBuilder API (ideally, all that can be done with raw SQL)
+* [x] Have an SQLBuilder object to have added a middle layer of complexity in between
 * [x] Support for more (ideally all) SQL dialects, i.e., DB engines
 * [x] Transactions approach
 * [x] Implement models

@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 Integer = int
 Float = float
 

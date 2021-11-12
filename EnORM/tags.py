@@ -20,5 +20,3 @@ class Key:
 
 class Record:
     """Docstring here."""
-
-    pass

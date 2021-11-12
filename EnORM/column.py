@@ -1,6 +1,6 @@
 from typing import Type
 
-from .structures import Key
+from .tags import Key
 
 
 class Column(Key):
@@ -19,5 +19,3 @@ class Column(Key):
 
 class ForeignKey(Key):
     """Docstring here."""
-
-    pass

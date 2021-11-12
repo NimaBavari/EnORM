@@ -5,10 +5,9 @@ from __future__ import annotations
 from types import TracebackType
 from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
-import pyodbc
-
+from .internals import DBEngine, SQLBuilder
 from .model import Model
-from .structures import Key, Label
+from .tags import Key, Label
 
 
 class DBSession:
@@ -60,16 +59,6 @@ class DBSession:
         for itm in self:
             self._cursor.execute(itm.sql, *itm.attrs.values())
         self._conn.commit()
-
-
-class DBEngine:
-    """Docstring here."""
-
-    def __init__(self, conn_str: str) -> None:
-        self.conn_str = conn_str
-
-    def connect(self) -> pyodbc.Connection:
-        return pyodbc.connect(self.conn_str)
 
 
 class Query:
@@ -124,38 +113,46 @@ class Query:
     def _add_to_data(self, key: str, val: str) -> None:
         self.data[key] = [*self.data.get(key, []), val]
 
-    def where(self, expr):
-        # add where logic to `self.data`
+    def where(self, expr) -> Query:
+        # TODO: add where logic to `self.data`
+        # TODO: add typing for `expr`
         return self
 
-    def join(self, model_cls):
-        # add join logic to `self.data`
+    def join(self, model_cls: Type) -> Query:
+        # TODO: add join logic to `self.data`
         return self
 
-    def having(self, expr):
-        # add having logic to `self.data`
+    def having(self, expr) -> Query:
+        # TODO: add having logic to `self.data`
+        # TODO: add typing for `expr`
         return self
 
-    def group_by(self, *columns):
-        # add group_by logic to `self.data`
+    def group_by(self, *columns: Type) -> Query:
+        # TODO: add group_by logic to `self.data`
         return self
 
-    def order_by(self, expr):
-        # add order_by logic to `self.data`
+    def order_by(self, expr) -> Query:
+        # TODO: add order_by logic to `self.data`
+        # TODO: add typing for `expr`
         return self
 
-    def limit(self, value):
-        # add limit logic to `self.data`
+    def limit(self, value) -> Query:
+        # TODO: add limit logic to `self.data`
+        # TODO: add typing for `value`
         return self
 
-    def offset(self, value):
+    def offset(self, value) -> Query:
+        # TODO: add offset logic to `self.data`
+        # TODO: add typing for `value`
         return self
+
+    @property
+    def sql(self) -> str:
+        builder = SQLBuilder(self.data)
+        return builder.parse()
 
     def slice(self, start, stop):
         pass
-
-    def sql(self):
-        return SQLBuilder(self.data)
 
     def all(self):
         pass
@@ -171,9 +168,3 @@ class Query:
 
     def delete(self):
         pass
-
-
-class SQLBuilder:
-    """Docstring here."""
-
-    pass
