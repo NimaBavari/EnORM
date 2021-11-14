@@ -113,10 +113,14 @@ class Query:
     def _add_to_data(self, key: str, val: str) -> None:
         self.data[key] = [*self.data.get(key, []), val]
 
-    def where(self, expr) -> Query:
-        # TODO: add where logic to `self.data`
-        # TODO: add typing for `expr`
+    def filter(self, *exprs: Union[str, bool]) -> Query:
+        # find a string representation of each expr in exprs (map each of them to a string)
+        # add these to self.data["where"]
         return self
+
+    def filter_by(self, **kwcrts: Any) -> Query:
+        criteria = [eval("%s == %s") % (key, val) for key, val in kwcrts.items()]
+        return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
         # TODO: add join logic to `self.data`
@@ -127,23 +131,20 @@ class Query:
         # TODO: add typing for `expr`
         return self
 
-    def group_by(self, *columns: Type) -> Query:
+    def group_by(self, *columns: Column) -> Query:
         # TODO: add group_by logic to `self.data`
         return self
 
-    def order_by(self, expr) -> Query:
+    def order_by(self, *columns: Column) -> Query:
         # TODO: add order_by logic to `self.data`
-        # TODO: add typing for `expr`
         return self
 
-    def limit(self, value) -> Query:
+    def limit(self, value: int) -> Query:
         # TODO: add limit logic to `self.data`
-        # TODO: add typing for `value`
         return self
 
-    def offset(self, value) -> Query:
+    def offset(self, value: int) -> Query:
         # TODO: add offset logic to `self.data`
-        # TODO: add typing for `value`
         return self
 
     @property
