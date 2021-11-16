@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type, Union
 
-from .types import ForeignKey, Integer, String
+from .types import Serial, String
 
 
 class Label:
@@ -19,6 +19,7 @@ class Column:
     def __init__(
         self,
         type_: Type,
+        length: Optional[int] = None,
         rel: Optional[ForeignKey] = None,
         *,
         primary_key: bool = False,
@@ -27,21 +28,33 @@ class Column:
     ) -> None:
         self.type = type_
         self.rel = rel
+        self.length = length
         self.primary_key = primary_key
         self.default = default
         self.nullable = nullable
-        if self.primary_key and self.type is not Integer:
-            raise TypeError("Primary key should be an integer.")
+        if self.primary_key and self.type not in [Serial, String]:
+            raise TypeError("Wrong type for primary key.")
 
-        if self.rel:
+        if self.rel is not None:
             if not isinstance(self.rel, ForeignKey):
                 raise TypeError("Relationship should be a ForeignKey.")
 
             if self.primary_key or self.default or not self.nullable:
                 raise TypeError("Wrong combination of arguments with ForeignKey.")
 
-            if self.type not in [Integer, String]:
+            if self.type not in [Serial, String]:
                 raise TypeError("Wrong type for ForeignKey.")
+
+        if self.length is not None:
+            if self.type != String:
+                raise TypeError("Only String type can have length.")
+
+            if not isinstance(self.length, int):
+                raise TypeError("String type should have an integer length.")
 
     def label(self, alias: str) -> Label:
         return Label(self, alias)
+
+
+class ForeignKey:
+    """Docstring here."""

@@ -1,17 +1,12 @@
-from typing import Optional
-
 Integer = int
 Float = float
+String = str
 
 
-class String(str):
+class Serial(Integer):
     """Docstring here."""
 
-    def __init__(self, length: Optional[int] = None):
-        self.length = length
-        if self.length is not None and not isinstance(self.length, Integer):
-            raise TypeError("String type should have an integer length.")
-
-
-class ForeignKey:
-    """Docstring here."""
+    def __init__(self, val: Integer) -> None:
+        self.val = val
+        if self.val < 1 or self.val > 2147483647:
+            raise ValueError("Serial value is out of bounds.")

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from .column import Column, Label
-from .types import Integer, String
+from .types import Float, Integer, Serial, String
 
 
 class Model:
@@ -14,6 +14,8 @@ class Model:
         # TODO: Fill this with type conversions
         Integer: "INTEGER",
         String: "VARCHAR",
+        Float: "NUMERIC",
+        Serial: "SERIAL",
     }
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Model:
@@ -69,7 +71,9 @@ class Model:
         if val.type.length is not None:
             type_pref += " %d" % val.type.length
         if val.primary_key:
-            type_pref += " AUTOINCREMENT PRIMARY KEY"
+            if val.type == Serial:
+                type_pref += " AUTOINCREMENT"
+            type_pref += " PRIMARY KEY"
         if val.default:
             type_pref += " DEFAULT %s" % val.default
         if not val.nullable:

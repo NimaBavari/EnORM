@@ -113,6 +113,11 @@ class Query:
     def _add_to_data(self, key: str, val: str) -> None:
         self.data[key] = [*self.data.get(key, []), val]
 
+    @property
+    def _sql(self) -> str:
+        builder = SQLBuilder(self.data)
+        return builder.parse()
+
     def filter(self, *exprs: Union[str, bool]) -> Query:
         # find a string representation of each expr in exprs (map each of them to a string)
         # add these to self.data["where"]
@@ -123,37 +128,36 @@ class Query:
         return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
-        # TODO: add join logic to `self.data`
+        # TODO: Implement. Note that this is very complicated.
         return self
 
     def having(self, expr) -> Query:
-        # TODO: add having logic to `self.data`
-        # TODO: add typing for `expr`
+        # TODO: Find a string representation of `expr`
+        self._add_to_data("having", expr)
         return self
 
     def group_by(self, *columns: Column) -> Query:
-        # TODO: add group_by logic to `self.data`
+        columns = [column for column in columns if column is not None]
+        if columns:
+            self.data["group_by"] = columns
         return self
 
     def order_by(self, *columns: Column) -> Query:
-        # TODO: add order_by logic to `self.data`
+        columns = [column for column in columns if column is not None]
+        if columns:
+            self.data["order_by"] = columns
         return self
 
     def limit(self, value: int) -> Query:
-        # TODO: add limit logic to `self.data`
+        self._add_to_data("limit", "%d" % value)
         return self
 
     def offset(self, value: int) -> Query:
-        # TODO: add offset logic to `self.data`
+        self._add_to_data("offset", "%d" % value)
         return self
 
-    @property
-    def sql(self) -> str:
-        builder = SQLBuilder(self.data)
-        return builder.parse()
-
-    def slice(self, start, stop):
-        pass
+    def slice(self, start: int, stop: int) -> Query:
+        return self.limit(stop - start).offset(start)
 
     def all(self):
         pass
@@ -162,6 +166,12 @@ class Query:
         pass
 
     def one_or_none(self):
+        pass
+
+    def exists(self):
+        pass
+
+    def count(self):
         pass
 
     def update(self, **fields_values):
