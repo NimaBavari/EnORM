@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Dict, Iterator, List, Optional, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from .column import Column, Label
 from .internals import DBEngine, SQLBuilder
@@ -17,7 +17,7 @@ class DBSession:
 
     def __new__(cls, *args: Any, **kwargs: Any) -> DBSession:
         if not isinstance(cls._instance, cls):
-            cls._instance = cls(*args, **kwargs)
+            cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, conn_str: str) -> None:
@@ -68,6 +68,8 @@ class Query:
         # NOTE: When `all`, `one`, etc. methods (the final methods) are
         # implemented, we need to convert the list of tuples into the list of
         # `Record` objects.
+        # NOTE: In future, `expr` will be an actual expression, rather than
+        # strings, in `having` method and for each `expr` in `filter` method.
         self.entities = entities
         self.session = session
         self.data: Dict[str, List[Any]] = {}
@@ -80,6 +82,7 @@ class Query:
         for item in self.entities:
             # TODO: Implement functions within query
             if isinstance(item, type):
+                self.mapped_class = item
                 self._add_to_data("select", "*")
                 self._add_to_data("from", item.get_table_name())
             elif isinstance(item, Column):
@@ -118,34 +121,40 @@ class Query:
         builder = SQLBuilder(self.data)
         return builder.parse()
 
-    def filter(self, *exprs: Union[str, bool]) -> Query:
-        # find a string representation of each expr in exprs (map each of them to a string)
-        # add these to self.data["where"]
+    @staticmethod
+    def parse(expression: str) -> Tuple[str, str, str, str]:
+        # TODO: Implement!
+        if not hasattr(eval(mapped_class), field_name):
+            raise AttributeError("%s does not have field %s" % (mapped_class, field_name))
+        return mapped_class, field_name, operator, value
+
+    def filter(self, *exprs: str) -> Query:
+        for expr in exprs:
+            self._add_to_data("where", "'%s'.'%s' %s %s" % self.parse(expr))
         return self
 
     def filter_by(self, **kwcrts: Any) -> Query:
-        criteria = [eval("%s == %s") % (key, val) for key, val in kwcrts.items()]
+        criteria = ["%s.%s == %s" % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
         # TODO: Implement. Note that this is very complicated.
         return self
 
-    def having(self, expr) -> Query:
-        # TODO: Find a string representation of `expr`
-        self._add_to_data("having", expr)
+    def having(self, expr: str) -> Query:
+        self._add_to_data("having", "'%s'.'%s' %s %s" % self.parse(expr))
         return self
 
-    def group_by(self, *columns: Column) -> Query:
-        columns = [column for column in columns if column is not None]
-        if columns:
-            self.data["group_by"] = columns
+    def group_by(self, *columns: Optional[Column]) -> Query:
+        cleaned_columns = [column for column in columns if column is not None]
+        if cleaned_columns:
+            self.data["group_by"] = cleaned_columns
         return self
 
-    def order_by(self, *columns: Column) -> Query:
-        columns = [column for column in columns if column is not None]
-        if columns:
-            self.data["order_by"] = columns
+    def order_by(self, *columns: Optional[Column]) -> Query:
+        cleaned_columns = [column for column in columns if column is not None]
+        if cleaned_columns:
+            self.data["order_by"] = cleaned_columns
         return self
 
     def limit(self, value: int) -> Query:
