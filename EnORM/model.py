@@ -11,7 +11,6 @@ class Model:
 
     __table__ = None
     __TYPES = {
-        # TODO: Fill this with type conversions
         Integer: "INTEGER",
         String: "VARCHAR",
         Float: "NUMERIC",
@@ -39,22 +38,29 @@ class Model:
 
     def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
+
         fields = self.get_fields()
         for key, value in self.attrs.items():
             if key not in fields.keys():
                 raise ValueError("Field name %s not exists." % key)
+
             expected_type = fields[key].type
             if not isinstance(value, expected_type):
                 raise TypeError("Field name %s expected %s but got %s" % (key, expected_type, type(value)))
+
         for field, value in fields.items():
             if field in self.attrs.keys():
                 continue
+
             if field == "id":
                 continue
+
             if value.nullable:
                 continue
+
             if value.default:
                 continue
+
             raise ValueError("Cannot call without field name %s" % field)
 
     @classmethod
@@ -68,18 +74,25 @@ class Model:
     @classmethod
     def get_type_pref(cls, field: str, val: Column) -> str:
         type_pref = cls.__TYPES[val.type]
-        if val.type.length is not None:
-            type_pref += " %d" % val.type.length
+        if val.length is not None:
+            type_pref += " (%d)" % val.length
+        elif val.type == String:
+            type_pref = "TEXT"
+
         if val.primary_key:
             if val.type == Serial:
                 type_pref += " AUTOINCREMENT"
             type_pref += " PRIMARY KEY"
+
         if val.default:
             type_pref += " DEFAULT %s" % val.default
+
         if not val.nullable:
             type_pref += " NOT NULL"
+
         if val.rel:
             pass  # TODO: add foreign key logic too
+
         return "%s %s" % (field, type_pref)
 
     @classmethod

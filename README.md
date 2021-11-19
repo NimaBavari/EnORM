@@ -27,7 +27,7 @@ with DBSession('postgresql://user:secret@localhost:5432/my_db') as session:
     the_company = session.query(Company).filter(country == 'United Kingdom').first()
 
     new_employee = Employee(full_name='Nima Bavari Goudarzi', salary=64320.00, role='engineer', company=the_company)
-    session.save(new_employee)
+    session.add(new_employee)
     
     sharks = session.query(Employee, 'full_name', 'company_id').filter(salary > 90000.00).all()
 ```
