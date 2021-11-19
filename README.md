@@ -24,10 +24,10 @@ class Company(Model):
     country = Column(String, 40)
 
 with DBSession('postgresql://user:secret@localhost:5432/my_db') as session:
-    the_company = session.query(Company).filter(country == 'United Kingdom').first()
+    the_company = session.query(Company).filter(Company.country == 'United Kingdom').first()
 
     new_employee = Employee(full_name='Nima Bavari Goudarzi', salary=64320.00, role='engineer', company=the_company)
     session.add(new_employee)
     
-    sharks = session.query(Employee, 'full_name', 'company_id').filter(salary > 90000.00).all()
+    sharks = session.query(Employee, 'full_name', 'company_id').filter(Employee.salary > 90000.00).all()
 ```

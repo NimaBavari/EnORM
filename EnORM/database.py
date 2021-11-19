@@ -201,8 +201,8 @@ class Query:
     def update(self, **fields_values) -> None:
         # TODO: Implement this!
         """Two ways of updates:
-            1. `user = session.query(User).filter("User.username == nbavari")` and then `user.age += 1`
-            2. `session.query(User).filter("User.username == nbavari").update(**field_values)`
+            1. `user = session.query(User).filter(User.username == "nbavari").first()` and then `user.age += 1`
+            2. `session.query(User).filter(User.username == "nbavari").update(**field_values)`
         You have to put `session.save()` after both to persist it.
         """
 
@@ -210,7 +210,7 @@ class Query:
         # TODO: Implement this!
         """Example usage:
         ```
-        session.query(User).filter("User.username == nbavari").delete()
+        session.query(User).filter(User.username == "nbavari").delete()
         session.save()
         ```
         """
