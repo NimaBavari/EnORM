@@ -33,32 +33,33 @@ class Model:
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         fields = cls.get_fields()
-        for v in fields.values():
-            v.model = cls
+        for field, val in fields.items():
+            val.model = cls
+            val.variable_name = field
 
     def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
 
         fields = self.get_fields()
-        for key, value in self.attrs.items():
+        for key, val in self.attrs.items():
             if key not in fields.keys():
                 raise ValueError("Field name %s not exists." % key)
 
             expected_type = fields[key].type
-            if not isinstance(value, expected_type):
-                raise TypeError("Field name %s expected %s but got %s" % (key, expected_type, type(value)))
+            if not isinstance(val, expected_type):
+                raise TypeError("Field name %s expected %s but got %s" % (key, expected_type, type(val)))
 
-        for field, value in fields.items():
+        for field, val in fields.items():
             if field in self.attrs.keys():
                 continue
 
             if field == "id":
                 continue
 
-            if value.nullable:
+            if val.nullable:
                 continue
 
-            if value.default:
+            if val.default:
                 continue
 
             raise ValueError("Cannot call without field name %s" % field)

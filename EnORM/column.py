@@ -52,6 +52,27 @@ class Column:
             if not isinstance(self.length, int):
                 raise TypeError("String type should have an integer length.")
 
+    def binary_ops(self, other: Any, operator: str) -> str:
+        return "'%s'.'%s' %s %s" % (self.model.__name__, self.variable_name, operator, other)
+
+    def __eq__(self, other: Any) -> str:  # type: ignore
+        return self.binary_ops(other, "=")
+
+    def __ne__(self, other: Any) -> str:  # type: ignore
+        return self.binary_ops(other, "<>")
+
+    def __lt__(self, other: Any) -> str:
+        return self.binary_ops(other, "<")
+
+    def __gt__(self, other: Any) -> str:
+        return self.binary_ops(other, ">")
+
+    def __le__(self, other: Any) -> str:
+        return self.binary_ops(other, "<=")
+
+    def __ge__(self, other: Any) -> str:
+        return self.binary_ops(other, ">=")
+
     def label(self, alias: str) -> Label:
         return Label(self, alias)
 

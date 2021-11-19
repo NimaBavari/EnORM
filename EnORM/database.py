@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 from .column import Column, Label
 from .internals import DBEngine, QuerySet, Record, SQLBuilder
@@ -79,9 +79,6 @@ class Query:
         # is a `Record` of pure tuple containing the other entities, each
         # attributed to the `MappedClass`. Note that, `MappedClass` is any
         # subclass of `Model`.
-        #
-        # NOTE: In future, `expr` will be an actual expression, rather than
-        # strings, in `having` method and for each `expr` in `filter` method.
         self.entities = entities
         self.session = session
         self.data: Dict[str, List[Any]] = {}
@@ -101,7 +98,7 @@ class Query:
                 try:
                     self._add_to_data(
                         "select",
-                        next(k for k, v in item.model.__dict__.items() if v is item),
+                        next(key for key, val in item.model.__dict__.items() if val is item),
                     )
                 except (AttributeError, StopIteration):
                     raise ValueError("Column name not found.")
@@ -116,7 +113,7 @@ class Query:
                     try:
                         self._add_to_data(
                             "select",
-                            next(k for k, v in denotee.model.__dict__.items() if v is item),
+                            next(key for key, val in denotee.model.__dict__.items() if val is item),
                         )
                     except (AttributeError, StopIteration):
                         raise ValueError("Column name not found.")
@@ -133,30 +130,22 @@ class Query:
         builder = SQLBuilder(self.data)
         return builder.parse()
 
-    @staticmethod
-    def parse(expression: str) -> Tuple[str, str, str, str]:
-        # TODO: Implement!
-        if not hasattr(eval(mapped_class), field_name):
-            raise AttributeError("%s does not have field %s" % (mapped_class, field_name))
-
-        return mapped_class, field_name, operator, value
-
-    def filter(self, *exprs: str) -> Query:
+    def filter(self, *exprs: Any) -> Query:
         for expr in exprs:
-            self._add_to_data("where", "'%s'.'%s' %s %s" % self.parse(expr))
+            self._add_to_data("where", expr)
 
         return self
 
     def filter_by(self, **kwcrts: Any) -> Query:
-        criteria = ["%s.%s == %s" % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
+        criteria = [eval("%s.%s == %s") % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
         # TODO: Implement. Note that this is very complicated.
         return self
 
-    def having(self, expr: str) -> Query:
-        self._add_to_data("having", "'%s'.'%s' %s %s" % self.parse(expr))
+    def having(self, expr: Any) -> Query:
+        self._add_to_data("having", expr)
         return self
 
     def group_by(self, *columns: Optional[Column]) -> Query:
