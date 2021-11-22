@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 from .column import Column, Label
 from .database import DBSession
-from .model import Model
 
 
 class SQLBuilder:
@@ -17,7 +16,7 @@ class SQLBuilder:
         return "Parsed value"  # TODO: implement this
 
 
-class Record(tuple, Model):
+class Record(tuple):
     """Docstring here."""
 
 
@@ -53,18 +52,32 @@ class QuerySet:
 
 
 class Query:
-    """Docstring here."""
+    """Main abstraction for querying for the whole ORM.
+
+    There are two ways to generate :class:`.query.Query` objects: either by calling the
+    :meth:`.database.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
+    :class:`.query.Query` directly.
+
+    Gets as arguments the
+
+    :param entities: -- which correspond to the "columns" of the matched results, and
+
+    :param session:, which is the current session.
+
+    .. warning::
+
+        :param entities: may contain at most one `MappedClass` instance.
+
+    NOTE: When the final methods, e.g., :meth:`.query.Query.all`, are implemented, we need to convert the list of tuple
+    objects into a list of :class:`.query.Record` objects, which in turn constructs a :class:`.query.QuerySet` object.
+
+    A :class:`.query.Record` object is a `MappedClass` object if the only entity in :param entities: is `MappedClass`
+    (annotated with `Type`); otherwise, it is a :class:`.query.Record` of a tuple, containing the other entities, each
+    of which is attributed to the `MappedClass` object. Note that `MappedClass` is any subclass of
+    :class:`.model.Model`.
+    """
 
     def __init__(self, *entities: Union[Type, Column, Label], session: DBSession) -> None:
-        # NOTE: When `all`, `one`, etc. methods (the final methods) are
-        # implemented, we need to convert the list of tuples into the list of
-        # `Record` objects.
-        #
-        # `Record` object is a `MappedClass` object if the only entity in
-        # `entities` is `MappedClass` (annotated with `Type`); otherwise, it
-        # is a `Record` of pure tuple containing the other entities, each
-        # attributed to the `MappedClass`. Note that, `MappedClass` is any
-        # subclass of `Model`.
         self.entities = entities
         self.session = session
         self.data: Dict[str, List[Any]] = {}
@@ -109,20 +122,56 @@ class Query:
                 raise TypeError("Wrong query format.")
 
     def _add_to_data(self, key: str, val: str) -> None:
+        """Appends a value to the list `self.data[key]`.
+
+        If `key` does not exist in `self.data`, instantiates it as an empty list and append to it.
+        """
         self.data[key] = [*self.data.get(key, []), val]
 
     @property
     def _sql(self) -> str:
+        """Gets the SQL representation of the current query.
+
+        :return: valid SQL string.
+        """
         builder = SQLBuilder(self.data)
         return builder.parse()
 
     def filter(self, *exprs: Any) -> Query:
+        """Exerts a series of valid comparison expressions as filtering criteria to the current instance.
+
+        E.g.::
+
+            session.query(User, email_address, last_visited)
+                .filter(User.first_name == 'Nima', User.age > 28)
+                .first()
+
+        Any number of criteria may be specified as separated by a comma.
+
+        .. seealso::
+
+            :meth:`.query.Query.filter_by` - filter on keyword arguments as criteria.
+        """
         for expr in exprs:
             self._add_to_data("where", expr)
 
         return self
 
     def filter_by(self, **kwcrts: Any) -> Query:
+        """Exerts a series of keyword arguments as filtering criteria to the current instance.
+
+        E.g.::
+
+            session.query(Employee, full_name, salary, tenure)
+                .filter_by(department="Information Technologies", status="active")
+                .all()
+
+        Any number of criteria may be specified as separated by a comma.
+
+        .. seealso::
+
+            :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
+        """
         criteria = [eval("%s.%s == %s") % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 

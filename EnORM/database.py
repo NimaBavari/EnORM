@@ -6,7 +6,8 @@ from typing import Any, Iterator, List, Optional, Type, Union
 import pyodbc
 
 from .column import Column, Label
-from .query import Query, Record
+from .model import Model
+from .query import Query
 
 
 class DBEngine:
@@ -34,7 +35,7 @@ class DBSession:
         self.engine = DBEngine(conn_str)
         self._conn = self.engine.connect()
         self._cursor = self._conn.cursor()
-        self.queue: List[Record] = []
+        self.queue: List[Model] = []
 
     def __enter__(self) -> Optional[DBSession]:
         return self._instance
@@ -51,13 +52,13 @@ class DBSession:
                 self._conn.close()
                 self._instance = None
 
-    def __iter__(self) -> Iterator[Record]:
+    def __iter__(self) -> Iterator[Model]:
         yield from self.queue
 
     def query(self, *fields: Union[Type, Column, Label]) -> Query:
         return Query(*fields, session=self)
 
-    def add(self, obj: Record) -> None:
+    def add(self, obj: Model) -> None:
         self.queue.append(obj)
 
     def save(self) -> None:
