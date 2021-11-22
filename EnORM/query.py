@@ -97,8 +97,7 @@ class Query:
                 try:
                     self._add_to_data(
                         "select",
-                        next(key for key, val in item.model.__dict__.items()
-                             if val is item),
+                        next(key for key, val in item.model.__dict__.items() if val is item),
                     )
                 except (AttributeError, StopIteration):
                     raise ValueError("Column name not found.")
@@ -113,8 +112,7 @@ class Query:
                     try:
                         self._add_to_data(
                             "select",
-                            next(
-                                key for key, val in denotee.model.__dict__.items() if val is item),
+                            next(key for key, val in denotee.model.__dict__.items() if val is item),
                         )
                     except (AttributeError, StopIteration):
                         raise ValueError("Column name not found.")
@@ -174,8 +172,7 @@ class Query:
 
             :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
         """
-        criteria = [eval("%s.%s == %s") % (
-            self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
+        criteria = [eval("%s.%s == %s") % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
