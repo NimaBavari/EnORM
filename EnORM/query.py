@@ -72,8 +72,8 @@ class Query:
     objects into a list of :class:`.query.Record` objects, which in turn constructs a :class:`.query.QuerySet` object.
 
     A :class:`.query.Record` object is a `MappedClass` object if the only entity in :param entities: is `MappedClass`
-    (annotated with `Type`); otherwise, it is a :class:`.query.Record` of a tuple, containing the other entities, each
-    of which is attributed to the `MappedClass` object. Note that `MappedClass` is any subclass of
+    (annotated with `Type`); otherwise, it is an object of :class:`.query.Record` of a tuple, containing the other
+    entities, each of which is attributed to the `MappedClass` object. Note that `MappedClass` is any subclass of
     :class:`.model.Model`.
     """
 
@@ -97,7 +97,8 @@ class Query:
                 try:
                     self._add_to_data(
                         "select",
-                        next(key for key, val in item.model.__dict__.items() if val is item),
+                        next(key for key, val in item.model.__dict__.items()
+                             if val is item),
                     )
                 except (AttributeError, StopIteration):
                     raise ValueError("Column name not found.")
@@ -112,7 +113,8 @@ class Query:
                     try:
                         self._add_to_data(
                             "select",
-                            next(key for key, val in denotee.model.__dict__.items() if val is item),
+                            next(
+                                key for key, val in denotee.model.__dict__.items() if val is item),
                         )
                     except (AttributeError, StopIteration):
                         raise ValueError("Column name not found.")
@@ -172,7 +174,8 @@ class Query:
 
             :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
         """
-        criteria = [eval("%s.%s == %s") % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
+        criteria = [eval("%s.%s == %s") % (
+            self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
