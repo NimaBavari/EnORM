@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Type, Union
 
+from .exceptions import IncompatibleArgument
 from .types import Serial, String
 
 
@@ -33,24 +34,24 @@ class Column:
         self.default = default
         self.nullable = nullable
         if self.primary_key and self.type not in [Serial, String]:
-            raise TypeError("Wrong type for primary key.")
+            raise IncompatibleArgument("Wrong type for primary key.")
 
         if self.rel is not None:
             if not isinstance(self.rel, ForeignKey):
-                raise TypeError("Relationship should be a ForeignKey.")
+                raise IncompatibleArgument("Relationship should be a ForeignKey.")
 
             if self.primary_key or self.default or not self.nullable:
-                raise TypeError("Wrong combination of arguments with ForeignKey.")
+                raise IncompatibleArgument("Wrong combination of arguments with ForeignKey.")
 
             if self.type not in [Serial, String]:
-                raise TypeError("Wrong type for ForeignKey.")
+                raise IncompatibleArgument("Wrong type for ForeignKey.")
 
         if self.length is not None:
             if self.type != String:
-                raise TypeError("Only String type can have length.")
+                raise IncompatibleArgument("Only String type can have length.")
 
             if not isinstance(self.length, int):
-                raise TypeError("String type should have an integer length.")
+                raise IncompatibleArgument("String type should have an integer length.")
 
     def binary_ops(self, other: Any, operator: str) -> str:
         return "'%s'.'%s' %s %s" % (self.model.__name__, self.variable_name, operator, other)

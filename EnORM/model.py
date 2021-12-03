@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from .column import Column, Label
+from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
 from .types import Float, Integer, Serial, String
 
 
@@ -43,11 +44,11 @@ class Model:
         fields = self.get_fields()
         for key, val in self.attrs.items():
             if key not in fields.keys():
-                raise ValueError("Field name %s not exists." % key)
+                raise FieldNotExist(key)
 
             expected_type = fields[key].type
             if not isinstance(val, expected_type):
-                raise TypeError("Field name %s expected %s but got %s" % (key, expected_type, type(val)))
+                raise WrongFieldType(key, expected_type, type(val))
 
         for field, val in fields.items():
             if field in self.attrs.keys():
@@ -62,7 +63,7 @@ class Model:
             if val.default:
                 continue
 
-            raise ValueError("Cannot call without field name %s" % field)
+            raise MissingRequiredField(field)
 
     @classmethod
     def get_fields(cls) -> Dict[str, Column]:

@@ -4,6 +4,7 @@ from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 from .column import Column, Label
 from .database import DBSession
+from .exceptions import EntityError, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 
 class SQLBuilder:
@@ -82,10 +83,10 @@ class Query:
         self.session = session
         self.data: Dict[str, List[Any]] = {}
         if not self.entities:
-            raise ValueError("No fields specified for querying.")
+            raise EntityError("No fields specified for querying.")
 
         if sum(isinstance(item, type) for item in self.entities) > 1:
-            raise ValueError("More than one model specified in the query.")
+            raise EntityError("More than one model specified in the query.")
 
         for item in self.entities:
             # TODO: Implement functions within query
@@ -100,7 +101,7 @@ class Query:
                         next(key for key, val in item.model.__dict__.items() if val is item),
                     )
                 except (AttributeError, StopIteration):
-                    raise ValueError("Column name not found.")
+                    raise EntityError("Column name not found.")
                 self._add_to_data("from", item.model.get_table_name())
             elif isinstance(item, Label):
                 denotee: Union[Type, Column] = item.denotee
@@ -115,11 +116,11 @@ class Query:
                             next(key for key, val in denotee.model.__dict__.items() if val is item),
                         )
                     except (AttributeError, StopIteration):
-                        raise ValueError("Column name not found.")
+                        raise EntityError("Column name not found.")
                     self._add_to_data("from", denotee.model.get_table_name())
                     self._add_to_data("select_as", item.text)
             else:
-                raise TypeError("Wrong query format.")
+                raise QueryFormatError
 
     def _add_to_data(self, key: str, val: str) -> None:
         """Appends a value to the list `self.data[key]`.
@@ -172,7 +173,7 @@ class Query:
 
             :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
         """
-        criteria = [eval("%s.%s == %s") % (self.mapped_class.__name__, key, val) for key, val in kwcrts.items()]
+        criteria = [eval("%s.%s == %s" % (self.mapped_class.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
     def join(self, model_cls: Type) -> Query:
@@ -210,11 +211,11 @@ class Query:
 
     def get(self, **kwargs: Any) -> Optional[Record]:
         if "where" in self.data and self.data["where"]:
-            raise ValueError("Cannot use `get` after `filter` or `filter_by`.")
+            raise MethodChainingError("Cannot use `get` after `filter` or `filter_by`.")
 
         query_set = self.filter_by(**kwargs).all()
         if len(query_set) > 1:
-            raise ValueError("Multiple results found.")
+            raise MultipleResultsFound
 
         return query_set[0] if query_set else None
 
@@ -232,7 +233,7 @@ class Query:
     def one_or_none(self) -> Optional[Record]:
         query_set = self.all()
         if len(query_set) > 1:
-            raise ValueError("Multiple results found.")
+            raise MultipleResultsFound
 
         return query_set[0] if query_set else None
 
