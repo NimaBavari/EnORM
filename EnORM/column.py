@@ -5,6 +5,8 @@ from typing import Any, Optional, Type, Union
 from .exceptions import IncompatibleArgument
 from .types import Serial, String
 
+CASCADE = "cascade"
+
 
 class Label:
     """Docstring here."""
@@ -25,11 +27,11 @@ class Column:
         *,
         primary_key: bool = False,
         default: Any = None,
-        nullable: bool = True
+        nullable: bool = True,
     ) -> None:
         self.type = type_
-        self.rel = rel
         self.length = length
+        self.rel = rel
         self.primary_key = primary_key
         self.default = default
         self.nullable = nullable
@@ -54,7 +56,12 @@ class Column:
                 raise IncompatibleArgument("String type should have an integer length.")
 
     def binary_ops(self, other: Any, operator: str) -> str:
-        return "'%s'.'%s' %s %s" % (self.model.__name__, self.variable_name, operator, other)
+        return "'%s'.'%s' %s %s" % (
+            self.model.__name__,
+            self.variable_name,
+            operator,
+            other,
+        )
 
     def __eq__(self, other: Any) -> str:  # type: ignore
         return self.binary_ops(other, "=")
@@ -80,3 +87,20 @@ class Column:
 
 class ForeignKey:
     """Docstring here."""
+
+    def __init__(
+        self,
+        foreign_model: Type,
+        *,
+        reverse_name: str,
+        on_delete: Optional[str] = None,
+        on_update: Optional[str] = None,
+    ) -> None:
+        self.foreign_model = foreign_model
+        self.reverse_name = reverse_name
+        self.on_delete = on_delete
+        self.on_update = on_update
+        if self.on_delete not in [None, CASCADE]:
+            raise IncompatibleArgument("Wrong value for on_delete")
+        if self.on_update not in [None, CASCADE]:
+            raise IncompatibleArgument("Wrong value for on_update")

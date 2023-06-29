@@ -40,7 +40,12 @@ class DBSession:
     def __enter__(self) -> Optional[DBSession]:
         return self._instance
 
-    def __exit__(self, exc_type: Type[BaseException], exc_value: BaseException, traceback: TracebackType) -> None:
+    def __exit__(
+        self,
+        exc_type: Type[BaseException],
+        exc_value: BaseException,
+        traceback: TracebackType,
+    ) -> None:
         if self._conn:
             try:
                 self.commit()

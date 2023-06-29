@@ -42,7 +42,11 @@ class WrongFieldType(Fixed):
     """Docstring here."""
 
     def __init__(self, field_name: str, exp_type: Type, actual_type: Type) -> None:
-        self.message = "Field %s expected %s but got %s." % (field_name, exp_type, actual_type)
+        self.message = "Field %s expected %s but got %s." % (
+            field_name,
+            exp_type,
+            actual_type,
+        )
         super().__init__()
 
 

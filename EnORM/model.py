@@ -25,7 +25,7 @@ class Model:
         CREATE TABLE %s (%s);""" % (
             tablename,
             tablename,
-            ", ".join([cls.get_type_pref(field, val) for field, val in fields.items()]),
+            ", ".join(cls.get_type_pref(field, val) for field, val in fields.items()),
         )
         # TODO: get session somehow (without having to pass it as an argument)
         # then `session._cursor.execute(query)`
@@ -75,36 +75,55 @@ class Model:
 
     @classmethod
     def get_type_pref(cls, field: str, val: Column) -> str:
-        type_pref = cls.__TYPES[val.type]
+        type_pref_inc = cls.__TYPES[val.type]
+        if val.rel is not None:
+            pref = "%s %s FOREIGN KEY (%s) REFERENCES %s(%s)" % (
+                field,
+                type_pref_inc,
+                field,
+                val.rel.foreign_model.__name__,
+                val.rel.foreign_model.primary_key_col_name,
+            )
+            if val.rel.on_delete is not None:
+                pref += " ON DELETE CASCADE"
+            if val.rel.on_update is not None:
+                pref += " ON UPDATE CASCADE"
+            return pref
+
         if val.length is not None:
-            type_pref += " (%d)" % val.length
+            type_pref_inc += " (%d)" % val.length
         elif val.type == String:
-            type_pref = "TEXT"
+            type_pref_inc = "TEXT"
 
         if val.primary_key:
             if val.type == Serial:
-                type_pref += " AUTOINCREMENT"
-            type_pref += " PRIMARY KEY"
+                type_pref_inc += " AUTOINCREMENT"
+            type_pref_inc += " PRIMARY KEY"
 
         if val.default:
-            type_pref += " DEFAULT %s" % val.default
+            type_pref_inc += " DEFAULT %s" % val.default
 
         if not val.nullable:
-            type_pref += " NOT NULL"
+            type_pref_inc += " NOT NULL"
 
-        if val.rel:
-            pass  # TODO: add foreign key logic too
-
-        return "%s %s" % (field, type_pref)
+        return "%s %s" % (field, type_pref_inc)
 
     @classmethod
     def label(cls, alias: str) -> Label:
         return Label(cls, alias)
 
     @property
+    def primary_key_col_name(self) -> str:
+        fields = self.get_fields()
+        for field, val in fields.items():
+            if val.primary_key:
+                return field
+        return "id"
+
+    @property
     def sql(self) -> str:
         return """INSERT INTO %s (%s) VALUES (%s);""" % (
             self.get_table_name(),
             ", ".join(self.attrs.keys()),
-            ", ".join(["?" for _ in self.attrs]),
+            ", ".join("?" for _ in self.attrs),
         )

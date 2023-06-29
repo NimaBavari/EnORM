@@ -6,7 +6,7 @@ Get ready for an EnORMous database experience!
 ## Example Usage
 
 ```python
-from EnORM import DBSession, Column, ForeignKey, Float, Integer, Model, Serial, String
+from EnORM import CASCADE, Column, DBSession, ForeignKey, Float, Integer, Model, Serial, String
 
 
 class Employee(Model):
