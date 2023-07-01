@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Union
 
 from .column import Column, Label
-from .database import DBSession
+
+if TYPE_CHECKING:
+    from .database import DBSession
+
 from .exceptions import EntityError, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 

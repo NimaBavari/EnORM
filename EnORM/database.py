@@ -6,7 +6,7 @@ from typing import Any, Iterator, List, Optional, Type, Union
 import pyodbc
 
 from .column import Column, Label
-from .model import Model
+from .model import Model, defined_model_qs
 from .query import Query
 
 
@@ -36,6 +36,9 @@ class DBSession:
         self._conn = self.engine.connect()
         self._cursor = self._conn.cursor()
         self.queue: List[Model] = []
+        for query in defined_model_qs:
+            self._cursor.execute(query)
+        self._conn.commit()
 
     def __enter__(self) -> Optional[DBSession]:
         return self._instance

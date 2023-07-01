@@ -6,6 +6,8 @@ from .column import Column, Label
 from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
 from .types import Float, Integer, Serial, String
 
+defined_model_qs = []
+
 
 class Model:
     """Docstring here."""
@@ -18,22 +20,16 @@ class Model:
         Serial: "SERIAL",
     }
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> Model:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
         fields = cls.get_fields()
         tablename = cls.get_table_name()
-        query = """DROP TABLE %s IF EXISTS;
-        CREATE TABLE %s (%s);""" % (
+        query = """DROP TABLE %s IF EXISTS; CREATE TABLE %s (%s);""" % (
             tablename,
             tablename,
             ", ".join(cls.get_type_pref(field, val) for field, val in fields.items()),
         )
-        # TODO: get session somehow (without having to pass it as an argument)
-        # then `session._cursor.execute(query)`
-        return super().__new__(cls)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        fields = cls.get_fields()
+        defined_model_qs.append(query)
         for field, val in fields.items():
             val.model = cls
             val.variable_name = field
@@ -74,6 +70,14 @@ class Model:
         return cls.__table__ or "%ss" % cls.__qualname__.lower()
 
     @classmethod
+    def primary_key_col_name(cls) -> str:
+        fields = cls.get_fields()
+        for field, val in fields.items():
+            if val.primary_key:
+                return field
+        return "id"
+
+    @classmethod
     def get_type_pref(cls, field: str, val: Column) -> str:
         type_pref_inc = cls.__TYPES[val.type]
         if val.rel is not None:
@@ -82,7 +86,7 @@ class Model:
                 type_pref_inc,
                 field,
                 val.rel.foreign_model.__name__,
-                val.rel.foreign_model.primary_key_col_name,
+                val.rel.foreign_model.primary_key_col_name(),
             )
             if val.rel.on_delete is not None:
                 pref += " ON DELETE CASCADE"
@@ -111,14 +115,6 @@ class Model:
     @classmethod
     def label(cls, alias: str) -> Label:
         return Label(cls, alias)
-
-    @property
-    def primary_key_col_name(self) -> str:
-        fields = self.get_fields()
-        for field, val in fields.items():
-            if val.primary_key:
-                return field
-        return "id"
 
     @property
     def sql(self) -> str:

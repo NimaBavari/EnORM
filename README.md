@@ -6,7 +6,15 @@ Get ready for an EnORMous database experience!
 ## Example Usage
 
 ```python
-from EnORM import CASCADE, Column, DBSession, ForeignKey, Float, Integer, Model, Serial, String
+from EnORM import CASCADE, Column, DBSession, Float, ForeignKey, Integer, Model, Serial, String
+
+
+class Company(Model):
+    __table__ = "companies"
+
+    id = Column(Serial, primary_key=True)
+    name = Column(String, nullable=False)
+    country = Column(String, 40)
 
 
 class Employee(Model):
@@ -14,14 +22,9 @@ class Employee(Model):
     full_name = Column(String, 100, nullable=False)
     salary = Column(Float)
     age = Column(Integer)
-    role = Column(String, 20, default='entry')
-    company = Column(Serial, ForeignKey(Company, reverse_name='employees', on_delete=CASCADE))
+    role = Column(String, 20, default="entry")
+    company_id = Column(Serial, None, ForeignKey(Company, reverse_name="employees", on_delete=CASCADE))
 
-
-class Company(Model):
-    id = Column(Serial, primary_key=True)
-    name = Column(String, nullable=False)
-    country = Column(String, 40)
 
 with DBSession('postgresql://user:secret@localhost:5432/my_db') as session:
     the_company = session.query(Company).filter(Company.country == 'United Kingdom').first()
