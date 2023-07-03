@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Iterator, List, Optional, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
@@ -20,6 +20,16 @@ class DBEngine:
         return pyodbc.connect(self.conn_str)
 
 
+class SQLBuilder:
+    """Docstring here."""
+
+    def __init__(self, data: Dict[str, List[Any]]) -> None:
+        self.data = data
+
+    def parse(self) -> str:
+        return "Parsed value"  # TODO: implement this
+
+
 class DBSession:
     """Docstring here."""
 
@@ -36,6 +46,7 @@ class DBSession:
         self._conn = self.engine.connect()
         self._cursor = self._conn.cursor()
         self.queue: List[Model] = []
+        self.data: Dict[str, List[Any]] = {}
         for query in defined_model_qs:
             self._cursor.execute(query)
         self._conn.commit()
@@ -51,7 +62,7 @@ class DBSession:
     ) -> None:
         if self._conn:
             try:
-                self.commit()
+                self.commit_adds()
             except exc_type:
                 self._conn.rollback()
                 raise
@@ -69,12 +80,24 @@ class DBSession:
     def add(self, obj: Model) -> None:
         self.queue.append(obj)
 
-    def save(self) -> None:
-        # TODO: Get emission of `UPDATE` and `DELETE` from the query. Hooks?
-        pass
+    @property
+    def _sql(self) -> str:
+        """Gets the SQL representation of the current query.
 
-    def commit(self) -> None:
+        :return: valid SQL string.
+        """
+        builder = SQLBuilder(self.data)
+        return builder.parse()
+
+    def save(self) -> None:
+        self._cursor.execute(self._sql)
+        self._conn.commit()
+        self.queue = []
+
+    def commit_adds(self) -> None:
         for itm in self:
             self._cursor.execute(itm.sql, *itm.attrs.values())
 
         self._conn.commit()
+
+        self.queue = []

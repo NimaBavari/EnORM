@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Type, Union
 
 from .column import Column, Label
 
@@ -8,16 +8,6 @@ if TYPE_CHECKING:
     from .database import DBSession
 
 from .exceptions import EntityError, MethodChainingError, MultipleResultsFound, QueryFormatError
-
-
-class SQLBuilder:
-    """Docstring here."""
-
-    def __init__(self, data: Dict[str, List[Any]]) -> None:
-        self.data = data
-
-    def parse(self) -> str:
-        return "Parsed value"  # TODO: implement this
 
 
 class Record(tuple):
@@ -84,7 +74,6 @@ class Query:
     def __init__(self, *entities: Union[Type, Column, Label], session: DBSession) -> None:
         self.entities = entities
         self.session = session
-        self.data: Dict[str, List[Any]] = {}
         if not self.entities:
             raise EntityError("No fields specified for querying.")
 
@@ -130,16 +119,7 @@ class Query:
 
         If `key` does not exist in `self.data`, instantiates it as an empty list and append to it.
         """
-        self.data[key] = [*self.data.get(key, []), val]
-
-    @property
-    def _sql(self) -> str:
-        """Gets the SQL representation of the current query.
-
-        :return: valid SQL string.
-        """
-        builder = SQLBuilder(self.data)
-        return builder.parse()
+        self.session.data[key] = [*self.session.data.get(key, []), val]
 
     def filter(self, *exprs: Any) -> Query:
         """Exerts a series of valid comparison expressions as filtering criteria to the current instance.
@@ -190,14 +170,14 @@ class Query:
     def group_by(self, *columns: Optional[Column]) -> Query:
         cleaned_columns = [column for column in columns if column is not None]
         if cleaned_columns:
-            self.data["group_by"] = cleaned_columns
+            self.session.data["group_by"] = cleaned_columns
 
         return self
 
     def order_by(self, *columns: Optional[Column]) -> Query:
         cleaned_columns = [column for column in columns if column is not None]
         if cleaned_columns:
-            self.data["order_by"] = cleaned_columns
+            self.session.data["order_by"] = cleaned_columns
 
         return self
 
@@ -213,7 +193,7 @@ class Query:
         return self.limit(stop - start).offset(start)
 
     def get(self, **kwargs: Any) -> Optional[Record]:
-        if "where" in self.data and self.data["where"]:
+        if "where" in self.session.data and self.session.data["where"]:
             raise MethodChainingError("Cannot use `get` after `filter` or `filter_by`.")
 
         query_set = self.filter_by(**kwargs).all()
@@ -255,10 +235,10 @@ class Query:
         """
 
     def delete(self) -> None:
-        # TODO: Implement this!
         """Example usage:
         ```
         session.query(User).filter(User.username == "nbavari").delete()
         session.save()
         ```
         """
+        self.session.data["delete"] = self.session.data.pop("select")
