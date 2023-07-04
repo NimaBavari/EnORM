@@ -7,11 +7,29 @@ from .column import Column, Label
 if TYPE_CHECKING:
     from .database import DBSession
 
-from .exceptions import EntityError, MethodChainingError, MultipleResultsFound, QueryFormatError
+from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 
-class Record(tuple):
+class Record(dict):
     """Docstring here."""
+
+    def __init__(self, query: Query) -> None:
+        super().__init__()
+        self.query = query
+
+    def __getattr__(self, field: str) -> Any:
+        if field not in self:
+            raise FieldNotExist(field)
+
+        return self[field]
+
+    def __setattr__(self, field: str, value: Any) -> None:
+        if field not in self:
+            raise FieldNotExist(field)
+
+        for k, v in self.items():
+            self.query.filter_by(**{k: v}).update(**{field: value})
+            break
 
 
 class QuerySet:
@@ -227,12 +245,13 @@ class Query:
         pass
 
     def update(self, **fields_values) -> None:
-        # TODO: Implement this!
         """Two ways of updates:
             1. `user = session.query(User).filter(User.username == "nbavari").first()` and then `user.age += 1`
             2. `session.query(User).filter(User.username == "nbavari").update(**field_values)`
         You have to put `session.save()` after both to persist it.
         """
+        self.session.data["update"] = self.session.data.pop("select")
+        self.session.data["set"] = list(fields_values.items())
 
     def delete(self) -> None:
         """Example usage:
