@@ -27,7 +27,49 @@ class SQLBuilder:
         self.data = data
 
     def parse(self) -> str:
-        return "Parsed value"  # TODO: implement this
+        # TODO: Take care of joins and subqueries
+        parsed_str = ""
+        if self.data["select"]:
+            table = self.data["from"][0]
+            column_seq = ", ".join(
+                "'%s'.'%s' AS %s" % (table, column, alias)
+                for column, alias in zip(self.data["select"], self.data["select_as"])
+            )
+            parsed_str += "SELECT %s FROM %s" % (column_seq, table)
+        elif self.data["delete"]:
+            table = self.data["from"][0]
+            parsed_str = "DELETE FROM %s" % table
+        elif self.data["update"]:
+            table = self.data["update"][0].get_table_name()
+            fields_values_seq = ", ".join("%s = %s" % (field, value) for field, value in self.data["set"])
+            parsed_str = "UPDATE %s SET %s" % (table, fields_values_seq)
+
+        if self.data["from_as"]:
+            parsed_str += " AS %s" % self.data["from_as"][0]
+
+        if self.data["where"]:
+            condition = " AND ".join(expr for expr in self.data["where"])
+            parsed_str += " WHERE %s" % condition
+
+        if self.data["group_by"]:
+            column_name_seq = ", ".join(col for col in self.data["group_by"])
+            parsed_str = " GROUP BY %s" % column_name_seq
+
+        if self.data["having"]:
+            condition = " AND ".join(expr for expr in self.data["having"])
+            parsed_str += " HAVING %s" % condition
+
+        if self.data["order_by"]:
+            column_name_seq = ", ".join(col for col in self.data["order_by"])
+            parsed_str = " ORDER BY %s" % column_name_seq
+
+        if self.data["limit"]:
+            parsed_str += " LIMIT %s" % self.data["limit"][0]
+
+        if self.data["offset"]:
+            parsed_str += " OFFSET %s" % self.data["offset"][0]
+
+        return parsed_str
 
 
 class DBSession:

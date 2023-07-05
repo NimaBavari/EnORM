@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from collections import UserDict
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Type, Union
+
+import pyodbc
 
 from .column import Column, Label
 
@@ -10,11 +13,11 @@ if TYPE_CHECKING:
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 
-class Record(dict):
+class Record(UserDict):
     """Docstring here."""
 
-    def __init__(self, query: Query) -> None:
-        super().__init__()
+    def __init__(self, d: dict, query: Query) -> None:
+        super().__init__(d)
         self.query = query
 
     def __getattr__(self, field: str) -> Any:
@@ -79,9 +82,6 @@ class Query:
     .. warning::
 
         :param entities: may contain at most one `MappedClass` instance.
-
-    NOTE: When the final methods, e.g., :meth:`.query.Query.all`, are implemented, we need to convert the list of tuple
-    objects into a list of :class:`.query.Record` objects, which in turn constructs a :class:`.query.QuerySet` object.
 
     A :class:`.query.Record` object is a `MappedClass` object if the only entity in :param entities: is `MappedClass`
     (annotated with `Type`); otherwise, it is an object of :class:`.query.Record` of a tuple, containing the other
@@ -181,15 +181,15 @@ class Query:
         # TODO: Implement. Note that this is very complicated.
         return self
 
-    def having(self, expr: Any) -> Query:
-        self._add_to_data("having", expr)
-        return self
-
     def group_by(self, *columns: Optional[Column]) -> Query:
         cleaned_columns = [column for column in columns if column is not None]
         if cleaned_columns:
             self.session.data["group_by"] = cleaned_columns
 
+        return self
+
+    def having(self, expr: Any) -> Query:
+        self._add_to_data("having", expr)
         return self
 
     def order_by(self, *columns: Optional[Column]) -> Query:
@@ -221,14 +221,17 @@ class Query:
         return query_set[0] if query_set else None
 
     def all(self) -> QuerySet:
-        pass
+        try:
+            self.session._cursor.execute(self.session._sql)
+            col_names = [col[0] for col in self.session._cursor.description]
+            results = [Record(dict(zip(col_names, row)), self) for row in self.session._cursor.fetchall()]
+        except pyodbc.DatabaseError:
+            raise  # TODO: Determine the exact source of the error and chain exceptions accordingly
+
+        return QuerySet(results)
 
     def first(self) -> Optional[Record]:
-        try:
-            (result,) = self.limit(1).all()
-        except ValueError:
-            return None
-
+        (result,) = self.limit(1).all()
         return result
 
     def one_or_none(self) -> Optional[Record]:
