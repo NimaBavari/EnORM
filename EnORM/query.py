@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import UserDict
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
@@ -66,6 +66,18 @@ class QuerySet:
         del self.lst[start:stop]
 
 
+class Subquery:
+    # TODO: Implement this!
+    # NOTE: Subquery is a view
+    """Docstring here."""
+
+    def __init__(self, inner_sql):
+        self.inner_sql = inner_sql
+
+    def __str__(self):
+        return self.inner_sql
+
+
 class Query:
     """Main abstraction for querying for the whole ORM.
 
@@ -92,6 +104,7 @@ class Query:
     def __init__(self, *entities: Union[Type, Column, Label], session: DBSession) -> None:
         self.entities = entities
         self.session = session
+        self.data: Dict[str, List[Any]] = {}
         if not self.entities:
             raise EntityError("No fields specified for querying.")
 
@@ -132,12 +145,23 @@ class Query:
             else:
                 raise QueryFormatError
 
+    def __str__(self) -> str:
+        return self._sql
+
     def _add_to_data(self, key: str, val: str) -> None:
         """Appends a value to the list `self.data[key]`.
 
         If `key` does not exist in `self.data`, instantiates it as an empty list and append to it.
         """
-        self.session.data[key] = [*self.session.data.get(key, []), val]
+        self.data[key] = [*self.data.get(key, []), val]
+
+    @property
+    def _sql(self) -> str:
+        """Gets the SQL representation of the current query.
+
+        :return: valid SQL string.
+        """
+        return self.parse()
 
     def filter(self, *exprs: Any) -> Query:
         """Exerts a series of valid comparison expressions as filtering criteria to the current instance.
@@ -184,7 +208,7 @@ class Query:
     def group_by(self, *columns: Optional[Column]) -> Query:
         cleaned_columns = [column for column in columns if column is not None]
         if cleaned_columns:
-            self.session.data["group_by"] = cleaned_columns
+            self.data["group_by"] = cleaned_columns
 
         return self
 
@@ -195,7 +219,7 @@ class Query:
     def order_by(self, *columns: Optional[Column]) -> Query:
         cleaned_columns = [column for column in columns if column is not None]
         if cleaned_columns:
-            self.session.data["order_by"] = cleaned_columns
+            self.data["order_by"] = cleaned_columns
 
         return self
 
@@ -210,8 +234,19 @@ class Query:
     def slice(self, start: int, stop: int) -> Query:
         return self.limit(stop - start).offset(start)
 
+    def desc(self) -> Query:
+        if "order_by" not in self.data or not self.data["order_by"]:
+            raise MethodChainingError("Cannot use `desc` without `order_by`.")
+
+        self.data["desc"] = []
+
+        return self
+
+    def subquery(self) -> Subquery:
+        return Subquery(self._sql)
+
     def get(self, **kwargs: Any) -> Optional[Record]:
-        if "where" in self.session.data and self.session.data["where"]:
+        if "where" in self.data and self.data["where"]:
             raise MethodChainingError("Cannot use `get` after `filter` or `filter_by`.")
 
         query_set = self.filter_by(**kwargs).all()
@@ -222,7 +257,7 @@ class Query:
 
     def all(self) -> QuerySet:
         try:
-            self.session._cursor.execute(self.session._sql)
+            self.session._cursor.execute(self._sql)
             col_names = [col[0] for col in self.session._cursor.description]
             results = [Record(dict(zip(col_names, row)), self) for row in self.session._cursor.fetchall()]
         except pyodbc.DatabaseError:
@@ -245,7 +280,12 @@ class Query:
         return bool(self.first())
 
     def count(self) -> int:
-        pass
+        try:
+            results = self.all()
+        except Exception:  # TODO: Rather, catch the exception raised by :meth:`all`
+            raise QueryFormatError
+
+        return len(results)
 
     def update(self, **fields_values) -> None:
         """Two ways of updates:
@@ -253,8 +293,8 @@ class Query:
             2. `session.query(User).filter(User.username == "nbavari").update(**field_values)`
         You have to put `session.save()` after both to persist it.
         """
-        self.session.data["update"] = self.session.data.pop("select")
-        self.session.data["set"] = list(fields_values.items())
+        self.data["update"] = self.data.pop("select")
+        self.data["set"] = list(fields_values.items())
 
     def delete(self) -> None:
         """Example usage:
@@ -263,4 +303,52 @@ class Query:
         session.save()
         ```
         """
-        self.session.data["delete"] = self.session.data.pop("select")
+        self.data["delete"] = self.data.pop("select")
+
+    def parse(self) -> str:
+        # TODO: Take care of joins and subqueries
+        parsed_str = ""
+        if self.data["select"]:
+            table = self.data["from"][0]
+            column_seq = ", ".join(
+                "'%s'.'%s' AS %s" % (table, column, alias)
+                for column, alias in zip(self.data["select"], self.data["select_as"])
+            )
+            parsed_str += "SELECT %s FROM %s" % (column_seq, table)
+        elif self.data["delete"]:
+            table = self.data["from"][0]
+            parsed_str = "DELETE FROM %s" % table
+        elif self.data["update"]:
+            table = self.data["update"][0].get_table_name()
+            fields_values_seq = ", ".join("%s = %s" % (field, value) for field, value in self.data["set"])
+            parsed_str = "UPDATE %s SET %s" % (table, fields_values_seq)
+
+        if self.data["from_as"]:
+            parsed_str += " AS %s" % self.data["from_as"][0]
+
+        if self.data["where"]:
+            condition = " AND ".join(expr for expr in self.data["where"])
+            parsed_str += " WHERE %s" % condition
+
+        if self.data["group_by"]:
+            column_name_seq = ", ".join(col for col in self.data["group_by"])
+            parsed_str = " GROUP BY %s" % column_name_seq
+
+        if self.data["having"]:
+            condition = " AND ".join(expr for expr in self.data["having"])
+            parsed_str += " HAVING %s" % condition
+
+        if self.data["order_by"]:
+            column_name_seq = ", ".join(col for col in self.data["order_by"])
+            parsed_str = " ORDER BY %s" % column_name_seq
+
+        if self.data["limit"]:
+            parsed_str += " LIMIT %s" % self.data["limit"][0]
+
+        if self.data["offset"]:
+            parsed_str += " OFFSET %s" % self.data["offset"][0]
+
+        if "desc" in self.data:
+            parsed_str += " DESC"
+
+        return parsed_str

@@ -81,8 +81,19 @@ class Column:
     def __ge__(self, other: Any) -> str:
         return self.binary_ops(other, ">=")
 
+    def like(self, other: str) -> str:
+        return self.binary_ops(other, "LIKE")
+
     def label(self, alias: str) -> Label:
         return Label(self, alias)
+
+    def in_(self, smth: Any) -> str:
+        # TODO: Implement this! Signature is wrong.
+        return ""
+
+    def not_in(self, smth: Any) -> str:
+        # TODO: Implement this! Signature is wrong.
+        return ""
 
 
 class ForeignKey:
