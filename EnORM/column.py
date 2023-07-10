@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Type, Union
+from typing import Any, Iterable, Optional, Type, Union
 
 from .exceptions import IncompatibleArgument
 from .types import Serial, String
@@ -40,20 +40,20 @@ class Column:
 
         if self.rel is not None:
             if not isinstance(self.rel, ForeignKey):
-                raise IncompatibleArgument("Relationship should be a ForeignKey.")
+                raise IncompatibleArgument("Relationship should be a `ForeignKey`.")
 
             if self.primary_key or self.default or not self.nullable:
-                raise IncompatibleArgument("Wrong combination of arguments with ForeignKey.")
+                raise IncompatibleArgument("Wrong combination of arguments with `ForeignKey`.")
 
             if self.type not in [Serial, String]:
-                raise IncompatibleArgument("Wrong type for ForeignKey.")
+                raise IncompatibleArgument("Wrong type for `ForeignKey`.")
 
         if self.length is not None:
             if self.type != String:
-                raise IncompatibleArgument("Only String type can have length.")
+                raise IncompatibleArgument("Only `String` type can have length.")
 
             if not isinstance(self.length, int):
-                raise IncompatibleArgument("String type should have an integer length.")
+                raise IncompatibleArgument("`String` type should have an integer length.")
 
     def binary_ops(self, other: Any, operator: str) -> str:
         return "'%s'.'%s' %s %s" % (
@@ -84,16 +84,16 @@ class Column:
     def like(self, other: str) -> str:
         return self.binary_ops(other, "LIKE")
 
+    def in_(self, flat_list: Iterable[Any]) -> str:
+        flat_list_str = "(%s)" % flat_list
+        return self.binary_ops(flat_list_str, "IN")
+
+    def not_in(self, flat_list: Iterable[Any]) -> str:
+        flat_list_str = "(%s)" % flat_list
+        return self.binary_ops(flat_list_str, "NOT IN")
+
     def label(self, alias: str) -> Label:
         return Label(self, alias)
-
-    def in_(self, smth: Any) -> str:
-        # TODO: Implement this! Signature is wrong.
-        return ""
-
-    def not_in(self, smth: Any) -> str:
-        # TODO: Implement this! Signature is wrong.
-        return ""
 
 
 class ForeignKey:
@@ -112,6 +112,17 @@ class ForeignKey:
         self.on_delete = on_delete
         self.on_update = on_update
         if self.on_delete not in [None, CASCADE]:
-            raise IncompatibleArgument("Wrong value for on_delete")
+            raise IncompatibleArgument("Wrong value for `on_delete`")
         if self.on_update not in [None, CASCADE]:
-            raise IncompatibleArgument("Wrong value for on_update")
+            raise IncompatibleArgument("Wrong value for `on_update`")
+
+
+class ColLike:
+    """Docstring here."""
+
+    def __init__(self, variable_name, view_name) -> None:
+        self.variable_name = variable_name
+        self.view_name = view_name
+
+    def label(self, alias: str) -> Label:
+        return Label(self, alias)

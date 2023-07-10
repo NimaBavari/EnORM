@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Uni
 
 import pyodbc
 
-from .column import Column, Label
+from .column import ColLike, Column, Label
 
 if TYPE_CHECKING:
     from .database import DBSession
@@ -67,15 +67,25 @@ class QuerySet:
 
 
 class Subquery:
-    # TODO: Implement this!
-    # NOTE: Subquery is a view
     """Docstring here."""
 
-    def __init__(self, inner_sql):
-        self.inner_sql = inner_sql
+    subquery_idx = 0
 
-    def __str__(self):
+    def __init__(self, inner_sql: str, column_names: List[str]) -> None:
+        Subquery.subquery_idx += 1
+        self.inner_sql = inner_sql
+        self.column_names = column_names
+        self.view_name = "anon_%d" % self.subquery_idx
+        self.full_sql = "(%s) AS %s" % (self.inner_sql, self.view_name)
+
+    def __str__(self) -> str:
         return self.inner_sql
+
+    def __getattr__(self, attr) -> Any:
+        if attr not in self.column_names:
+            raise EntityError("Wrong field for subquery.")
+
+        return ColLike(attr, self.view_name)
 
 
 class Query:
@@ -115,33 +125,45 @@ class Query:
             # TODO: Implement functions within query
             if isinstance(item, type):
                 self.mapped_class = item
-                self._add_to_data("select", "*")
-                self._add_to_data("from", item.get_table_name())
+                table_name = item.get_table_name()
+                self._add_to_data("select", "%s, *" % table_name)
+                self._add_to_data("from", table_name)
             elif isinstance(item, Column):
+                table_name = item.model.get_table_name()
                 try:
                     self._add_to_data(
                         "select",
-                        next(key for key, val in item.model.__dict__.items() if val is item),
+                        "%s, %s" % (table_name, next(key for key, val in item.model.__dict__.items() if val is item)),
                     )
                 except (AttributeError, StopIteration):
                     raise EntityError("Column name not found.")
-                self._add_to_data("from", item.model.get_table_name())
+                self._add_to_data("from", table_name)
+            elif isinstance(item, ColLike):
+                self._add_to_data("select", "%s, %s" % (item.view_name, item.variable_name))
             elif isinstance(item, Label):
-                denotee: Union[Type, Column] = item.denotee
+                denotee: Union[Type, Column, ColLike] = item.denotee
                 if isinstance(denotee, type):
-                    self._add_to_data("select", "*")
-                    self._add_to_data("from", denotee.get_table_name())
+                    table_name = denotee.get_table_name()
+                    self._add_to_data("select", "%s, *" % table_name)
+                    self._add_to_data("from", table_name)
                     self._add_to_data("from_as", item.text)
                 elif isinstance(denotee, Column):
+                    table_name = denotee.model.get_table_name()
                     try:
                         self._add_to_data(
                             "select",
-                            next(key for key, val in denotee.model.__dict__.items() if val is item),
+                            "%s, %s, %s"
+                            % (
+                                table_name,
+                                next(key for key, val in denotee.model.__dict__.items() if val is item),
+                                item.text,
+                            ),
                         )
                     except (AttributeError, StopIteration):
                         raise EntityError("Column name not found.")
-                    self._add_to_data("from", denotee.model.get_table_name())
-                    self._add_to_data("select_as", item.text)
+                    self._add_to_data("from", table_name)
+                elif isinstance(denotee, ColLike):
+                    self._add_to_data("select", "%s, %s, %s" % (denotee.view_name, denotee.variable_name, item.text))
             else:
                 raise QueryFormatError
 
@@ -243,7 +265,8 @@ class Query:
         return self
 
     def subquery(self) -> Subquery:
-        return Subquery(self._sql)
+        column_names = [s.split(", ")[1] for s in self.data["select"]]
+        return Subquery(self._sql, column_names)
 
     def get(self, **kwargs: Any) -> Optional[Record]:
         if "where" in self.data and self.data["where"]:
@@ -306,14 +329,14 @@ class Query:
         self.data["delete"] = self.data.pop("select")
 
     def parse(self) -> str:
-        # TODO: Take care of joins and subqueries
+        # TODO: Take care of joins
         parsed_str = ""
         if self.data["select"]:
-            table = self.data["from"][0]
             column_seq = ", ".join(
-                "'%s'.'%s' AS %s" % (table, column, alias)
-                for column, alias in zip(self.data["select"], self.data["select_as"])
+                "'%s'.'%s' AS %s" % (*s.split(", "),) if len(s.split(", ")) == 3 else "'%s'.'%s'"
+                for s in self.data["select"]
             )
+            table = self.data["from"][0]
             parsed_str += "SELECT %s FROM %s" % (column_seq, table)
         elif self.data["delete"]:
             table = self.data["from"][0]
