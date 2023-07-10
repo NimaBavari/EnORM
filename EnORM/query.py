@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Uni
 
 import pyodbc
 
-from .column import ColLike, Column, Label
+from .column import BaseColumn, Column, Label, VirtualColumn
 
 if TYPE_CHECKING:
     from .database import DBSession
@@ -38,7 +38,7 @@ class Record(UserDict):
 class QuerySet:
     """Docstring here."""
 
-    def __init__(self, lst: List[Record]):
+    def __init__(self, lst: List[Record]) -> None:
         self.lst = lst
 
     def __iter__(self) -> Iterator[Record]:
@@ -85,7 +85,7 @@ class Subquery:
         if attr not in self.column_names:
             raise EntityError("Wrong field for subquery.")
 
-        return ColLike(attr, self.view_name)
+        return VirtualColumn(attr, self.view_name)
 
 
 class Query:
@@ -122,48 +122,25 @@ class Query:
             raise EntityError("More than one model specified in the query.")
 
         for item in self.entities:
-            # TODO: Implement functions within query
             if isinstance(item, type):
                 self.mapped_class = item
                 table_name = item.get_table_name()
                 self._add_to_data("select", "%s, *" % table_name)
                 self._add_to_data("from", table_name)
-            elif isinstance(item, Column):
-                table_name = item.model.get_table_name()
-                try:
-                    self._add_to_data(
-                        "select",
-                        "%s, %s" % (table_name, next(key for key, val in item.model.__dict__.items() if val is item)),
-                    )
-                except (AttributeError, StopIteration):
-                    raise EntityError("Column name not found.")
-                self._add_to_data("from", table_name)
-            elif isinstance(item, ColLike):
-                self._add_to_data("select", "%s, %s" % (item.view_name, item.variable_name))
+            elif isinstance(item, BaseColumn):
+                self._add_to_data("select", item.compund_variable_name)
+                if isinstance(item, Column):
+                    self._add_to_data("from", item.view_name)
             elif isinstance(item, Label):
-                denotee: Union[Type, Column, ColLike] = item.denotee
-                if isinstance(denotee, type):
-                    table_name = denotee.get_table_name()
+                if isinstance(item.denotee, type):
+                    table_name = item.denotee.get_table_name()
                     self._add_to_data("select", "%s, *" % table_name)
                     self._add_to_data("from", table_name)
                     self._add_to_data("from_as", item.text)
-                elif isinstance(denotee, Column):
-                    table_name = denotee.model.get_table_name()
-                    try:
-                        self._add_to_data(
-                            "select",
-                            "%s, %s, %s"
-                            % (
-                                table_name,
-                                next(key for key, val in denotee.model.__dict__.items() if val is item),
-                                item.text,
-                            ),
-                        )
-                    except (AttributeError, StopIteration):
-                        raise EntityError("Column name not found.")
-                    self._add_to_data("from", table_name)
-                elif isinstance(denotee, ColLike):
-                    self._add_to_data("select", "%s, %s, %s" % (denotee.view_name, denotee.variable_name, item.text))
+                elif isinstance(item.denotee, BaseColumn):
+                    self._add_to_data("select", "%s, %s" % (item.denotee.compund_variable_name, item.text))
+                    if isinstance(item.denotee, Column):
+                        self._add_to_data("from", table_name)
             else:
                 raise QueryFormatError
 
@@ -185,7 +162,7 @@ class Query:
         """
         return self.parse()
 
-    def filter(self, *exprs: Any) -> Query:
+    def filter(self, *exprs: List[Any]) -> Query:
         """Exerts a series of valid comparison expressions as filtering criteria to the current instance.
 
         E.g.::
@@ -228,9 +205,9 @@ class Query:
         return self
 
     def group_by(self, *columns: Optional[Column]) -> Query:
-        cleaned_columns = [column for column in columns if column is not None]
-        if cleaned_columns:
-            self.data["group_by"] = cleaned_columns
+        column_names = [column.compound_variable_name for column in columns if column is not None]
+        if column_names:
+            self.data["group_by"] = column_names
 
         return self
 
@@ -239,9 +216,9 @@ class Query:
         return self
 
     def order_by(self, *columns: Optional[Column]) -> Query:
-        cleaned_columns = [column for column in columns if column is not None]
-        if cleaned_columns:
-            self.data["order_by"] = cleaned_columns
+        column_names = [column.compound_variable_name for column in columns if column is not None]
+        if column_names:
+            self.data["order_by"] = column_names
 
         return self
 
@@ -262,6 +239,10 @@ class Query:
 
         self.data["desc"] = []
 
+        return self
+
+    def distinct(self) -> Query:
+        self.data["distinct"] = []
         return self
 
     def subquery(self) -> Subquery:
@@ -337,6 +318,8 @@ class Query:
                 for s in self.data["select"]
             )
             table = self.data["from"][0]
+            if "distinct" in self.data:
+                column_seq = "DISTINCT %s" % column_seq
             parsed_str += "SELECT %s FROM %s" % (column_seq, table)
         elif self.data["delete"]:
             table = self.data["from"][0]
@@ -354,7 +337,7 @@ class Query:
             parsed_str += " WHERE %s" % condition
 
         if self.data["group_by"]:
-            column_name_seq = ", ".join(col for col in self.data["group_by"])
+            column_name_seq = ", ".join(self.data["group_by"])
             parsed_str = " GROUP BY %s" % column_name_seq
 
         if self.data["having"]:
@@ -362,7 +345,7 @@ class Query:
             parsed_str += " HAVING %s" % condition
 
         if self.data["order_by"]:
-            column_name_seq = ", ".join(col for col in self.data["order_by"])
+            column_name_seq = ", ".join(self.data["order_by"])
             parsed_str = " ORDER BY %s" % column_name_seq
 
         if self.data["limit"]:
