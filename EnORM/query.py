@@ -20,18 +20,24 @@ class Record(UserDict):
         super().__init__(d)
         self.query = query
 
-    def __getattr__(self, field: str) -> Any:
-        if field not in self:
-            raise FieldNotExist(field)
+    def __getattr__(self, attr: str) -> Any:
+        # if len(self.query.entities) == 1 and isinstance(self.query.entities[0], Type):
+        #     self_model = self.query.entities[0]
+        #     for c in columns:  # TODO: fix this
+        #         if c.rel is not None and c.rel.foreign_model == self_model and c.rel.reverse_name == attr:
+        #             return self.query.session.query(c.model).join(self_model).subquery()
 
-        return self[field]
+        if attr not in self:
+            raise FieldNotExist(attr)
 
-    def __setattr__(self, field: str, value: Any) -> None:
-        if field not in self:
-            raise FieldNotExist(field)
+        return self[attr]
+
+    def __setattr__(self, attr: str, value: Any) -> None:
+        if attr not in self:
+            raise FieldNotExist(attr)
 
         for k, v in self.items():
-            self.query.filter_by(**{k: v}).update(**{field: value})
+            self.query.filter_by(**{k: v}).update(**{attr: value})
             break
 
 
@@ -81,7 +87,7 @@ class Subquery:
     def __str__(self) -> str:
         return self.inner_sql
 
-    def __getattr__(self, attr) -> Any:
+    def __getattr__(self, attr: str) -> Any:
         if attr not in self.column_names:
             raise EntityError("Wrong field for subquery.")
 
@@ -111,7 +117,7 @@ class Query:
     :class:`.model.Model`.
     """
 
-    def __init__(self, *entities: Union[Type, Column, Label], session: DBSession) -> None:
+    def __init__(self, *entities: Union[Type, BaseColumn, Label], session: DBSession) -> None:
         self.entities = entities
         self.session = session
         self.data: Dict[str, List[Any]] = {}
@@ -128,7 +134,7 @@ class Query:
                 self._add_to_data("select", "%s, *" % table_name)
                 self._add_to_data("from", table_name)
             elif isinstance(item, BaseColumn):
-                self._add_to_data("select", item.compund_variable_name)
+                self._add_to_data("select", item.compound_variable_name)
                 if isinstance(item, Column):
                     self._add_to_data("from", item.view_name)
             elif isinstance(item, Label):
@@ -138,7 +144,7 @@ class Query:
                     self._add_to_data("from", table_name)
                     self._add_to_data("from_as", item.text)
                 elif isinstance(item.denotee, BaseColumn):
-                    self._add_to_data("select", "%s, %s" % (item.denotee.compund_variable_name, item.text))
+                    self._add_to_data("select", "%s, %s" % (item.denotee.compound_variable_name, item.text))
                     if isinstance(item.denotee, Column):
                         self._add_to_data("from", table_name)
             else:
@@ -162,7 +168,7 @@ class Query:
         """
         return self.parse()
 
-    def filter(self, *exprs: List[Any]) -> Query:
+    def filter(self, *exprs: Any) -> Query:
         """Exerts a series of valid comparison expressions as filtering criteria to the current instance.
 
         E.g.::
@@ -197,11 +203,40 @@ class Query:
 
             :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
         """
-        criteria = [eval("%s.%s == %s" % (self.mapped_class.__name__, key, val)) for key, val in kwcrts.items()]
+        model = self.mapped_class or self.entities[0].model  # type: ignore
+        criteria = [eval("%s.%s == %s" % (model.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
-    def join(self, model_cls: Type) -> Query:
-        # TODO: Implement. Note that this is very complicated.
+    def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
+        self_model = self.mapped_class or self.entities[0].model  # type: ignore
+        if isinstance(mapped, Type):  # type: ignore
+            connector_column = self_model.get_connector_column(mapped)
+            if connector_column is None:
+                raise EntityError("No connector key found between %s and %s." % (self_model.__name__, mapped.__name__))
+
+            self._add_to_data("join", mapped.get_table_name())
+            if exprs:
+                self.data["on"] = exprs  # type: ignore
+            else:
+                self._add_to_data(
+                    "on",
+                    eval(
+                        "%s.%s == %s.%s"
+                        % (
+                            self_model.__name__,
+                            connector_column.variable_name,
+                            mapped.__name__,
+                            mapped.primary_key_col_name(),
+                        )
+                    ),
+                )
+        elif isinstance(mapped, Subquery):
+            if not exprs:
+                raise EntityError("Cannot join subquery without connector expressions.")
+            else:
+                self._add_to_data("join", mapped.full_sql)
+                self.data["on"] = exprs  # type: ignore
+
         return self
 
     def group_by(self, *columns: Optional[Column]) -> Query:
@@ -265,7 +300,7 @@ class Query:
             col_names = [col[0] for col in self.session._cursor.description]
             results = [Record(dict(zip(col_names, row)), self) for row in self.session._cursor.fetchall()]
         except pyodbc.DatabaseError:
-            raise  # TODO: Determine the exact source of the error and chain exceptions accordingly
+            raise QueryFormatError
 
         return QuerySet(results)
 
@@ -286,8 +321,8 @@ class Query:
     def count(self) -> int:
         try:
             results = self.all()
-        except Exception:  # TODO: Rather, catch the exception raised by :meth:`all`
-            raise QueryFormatError
+        except QueryFormatError:
+            raise
 
         return len(results)
 
@@ -310,7 +345,6 @@ class Query:
         self.data["delete"] = self.data.pop("select")
 
     def parse(self) -> str:
-        # TODO: Take care of joins
         parsed_str = ""
         if self.data["select"]:
             column_seq = ", ".join(
@@ -335,6 +369,10 @@ class Query:
         if self.data["where"]:
             condition = " AND ".join(expr for expr in self.data["where"])
             parsed_str += " WHERE %s" % condition
+
+        if self.data["join"]:
+            condition = " AND ".join(expr for expr in self.data["on"])
+            parsed_str += " JOIN %s ON %s" % (self.data["join"][0], condition)
 
         if self.data["group_by"]:
             column_name_seq = ", ".join(self.data["group_by"])

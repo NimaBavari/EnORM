@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Type
 
 from .column import Column, Label
 from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
@@ -31,8 +31,8 @@ class Model:
         )
         defined_model_qs.append(query)
         for field, val in fields.items():
-            val.model = cls
-            val.variable_name = field
+            val.model = cls  # type: ignore
+            val.variable_name = field  # type: ignore
 
     def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
@@ -78,6 +78,14 @@ class Model:
         return "id"
 
     @classmethod
+    def get_connector_column(cls, mapped: Type) -> Optional[Column]:
+        for _, c in cls.get_fields().items():
+            if c.rel and c.rel.foreign_model == mapped:
+                return c
+
+        return None
+
+    @classmethod
     def get_type_pref(cls, field: str, val: Column) -> str:
         type_pref_inc = cls.__TYPES[val.type]
         if val.rel is not None:
@@ -85,7 +93,7 @@ class Model:
                 field,
                 type_pref_inc,
                 field,
-                val.rel.foreign_model.__name__,
+                val.rel.foreign_model.get_table_name(),
                 val.rel.foreign_model.primary_key_col_name(),
             )
             if val.rel.on_delete is not None:
@@ -115,6 +123,12 @@ class Model:
     @classmethod
     def label(cls, alias: str) -> Label:
         return Label(cls, alias)
+
+    # def __getattr__(self, attr: str) -> Any:
+    #     self_model = type(self)
+    #     for c in columns:  # TODO: fix this
+    #         if c.rel is not None and c.rel.foreign_model == self_model and c.rel.reverse_name == attr:
+    #             return session.query(c.model).join(self_model).subquery()
 
     @property
     def sql(self) -> str:

@@ -11,7 +11,7 @@ CASCADE = "cascade"
 class Label:
     """Docstring here."""
 
-    def __init__(self, denotee: Union[Type, Column], text: str) -> None:
+    def __init__(self, denotee: Union[Type, BaseColumn], text: str) -> None:
         self.denotee = denotee
         self.text = text
 
@@ -19,8 +19,11 @@ class Label:
 class BaseColumn:
     """Docstring here."""
 
+    def __init__(self) -> None:
+        self.compound_variable_name = "%s, %s" % (self.view_name, self.variable_name)  # type: ignore
+
     def binary_ops(self, other: Any, operator: str) -> str:
-        return "'%s'.'%s' %s %s" % (self.view_name, self.variable_name, operator, other)
+        return "'%s'.'%s' %s %s" % (self.view_name, self.variable_name, operator, other)  # type: ignore
 
     def __eq__(self, other: Any) -> str:  # type: ignore
         return self.binary_ops(other, "=")
@@ -53,14 +56,6 @@ class BaseColumn:
 
     def label(self, alias: str) -> Label:
         return Label(self, alias)
-
-    @property
-    def compund_variable_name(self) -> str:
-        return "%s, %s" % (self.view_name, self.variable_name)
-
-    @compund_variable_name.setter
-    def compound_variable_name(self, value: str) -> None:
-        self.compound_variable_name = value
 
 
 class ForeignKey:
@@ -103,7 +98,7 @@ class Column(BaseColumn):
         self.primary_key = primary_key
         self.default = default
         self.nullable = nullable
-        self.view_name = self.model.get_table_name()
+        self.view_name = self.model.get_table_name()  # type: ignore
         if self.primary_key and self.type not in [Serial, String]:
             raise IncompatibleArgument("Wrong type for primary key.")
 
@@ -124,6 +119,8 @@ class Column(BaseColumn):
             if not isinstance(self.length, int):
                 raise IncompatibleArgument("`String` type should have an integer length.")
 
+        super().__init__()
+
 
 class VirtualColumn(BaseColumn):
     """Docstring here."""
@@ -131,3 +128,4 @@ class VirtualColumn(BaseColumn):
     def __init__(self, variable_name, view_name) -> None:
         self.variable_name = variable_name
         self.view_name = view_name
+        super().__init__()

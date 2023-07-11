@@ -5,7 +5,7 @@ from typing import Any, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
-from .column import Column, Label
+from .column import BaseColumn, Label
 from .model import Model, defined_model_qs
 from .query import Query
 
@@ -64,7 +64,7 @@ class DBSession:
     def __iter__(self) -> Iterator[Model]:
         yield from self.queue
 
-    def query(self, *fields: Union[Type, Column, Label]) -> Query:
+    def query(self, *fields: Union[Type, BaseColumn, Label]) -> Query:
         q = Query(*fields, session=self)
         self.accumulator.append(q)
         return q
