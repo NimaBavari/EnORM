@@ -6,7 +6,7 @@ from typing import Any, Iterator, List, Optional, Type, Union
 import pyodbc
 
 from .column import BaseColumn, Label
-from .model import Model, defined_model_qs
+from .model import Model
 from .query import Query
 
 
@@ -37,8 +37,15 @@ class DBSession:
         self._cursor = self._conn.cursor()
         self.queue: List[Model] = []
         self.accumulator: List[Query] = []
-        for query in defined_model_qs:
-            self._cursor.execute(query)
+
+        try:
+            for query in Model.model_definition_sqls:
+                self._cursor.execute(query)
+        except pyodbc.DatabaseError:
+            raise
+
+        Model.model_definition_sqls = []
+
         self._conn.commit()
 
     def __enter__(self) -> Optional[DBSession]:

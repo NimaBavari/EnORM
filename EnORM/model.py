@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from .column import Column, Label
 from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
 from .types import Float, Integer, Serial, String
-
-defined_model_qs = []
 
 
 class Model:
@@ -20,19 +18,26 @@ class Model:
         Serial: "SERIAL",
     }
 
+    __dep_mapping: Dict[type, List[type]] = {}
+
+    model_definition_sqls: List[str] = []
+
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         fields = cls.get_fields()
         tablename = cls.get_table_name()
-        query = """DROP TABLE %s IF EXISTS; CREATE TABLE %s (%s);""" % (
+        def_sql = """DROP TABLE %s IF EXISTS; CREATE TABLE %s (%s);""" % (
             tablename,
             tablename,
             ", ".join(cls.get_type_pref(field, val) for field, val in fields.items()),
         )
-        defined_model_qs.append(query)
+        cls.model_definition_sqls.append(def_sql)
+
         for field, val in fields.items():
             val.model = cls  # type: ignore
             val.variable_name = field  # type: ignore
+            if val.rel is not None:
+                cls.__dep_mapping[val.rel.foreign_model] = [*cls.__dep_mapping.get(val.rel.foreign_model, []), cls]
 
     def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
@@ -70,17 +75,17 @@ class Model:
         return cls.__table__ or "%ss" % cls.__qualname__.lower()
 
     @classmethod
-    def primary_key_col_name(cls) -> str:
-        fields = cls.get_fields()
-        for field, val in fields.items():
-            if val.primary_key:
-                return field
-        return "id"
+    def get_primary_key_column(cls) -> Optional[Column]:
+        for _, c in cls.get_fields().items():
+            if c.primary_key:
+                return c
+
+        return None
 
     @classmethod
     def get_connector_column(cls, mapped: Type) -> Optional[Column]:
         for _, c in cls.get_fields().items():
-            if c.rel and c.rel.foreign_model == mapped:
+            if c.rel is not None and c.rel.foreign_model == mapped:
                 return c
 
         return None
@@ -94,7 +99,7 @@ class Model:
                 type_pref_inc,
                 field,
                 val.rel.foreign_model.get_table_name(),
-                val.rel.foreign_model.primary_key_col_name(),
+                val.rel.foreign_model.get_primary_key_column().variable_name,
             )
             if val.rel.on_delete is not None:
                 pref += " ON DELETE CASCADE"
@@ -124,11 +129,17 @@ class Model:
     def label(cls, alias: str) -> Label:
         return Label(cls, alias)
 
-    # def __getattr__(self, attr: str) -> Any:
-    #     self_model = type(self)
-    #     for c in columns:  # TODO: fix this
-    #         if c.rel is not None and c.rel.foreign_model == self_model and c.rel.reverse_name == attr:
-    #             return session.query(c.model).join(self_model).subquery()
+    def __getattr__(self, attr: str) -> Any:
+        try:
+            return getattr(self, attr)
+        except AttributeError:
+            # self_model = type(self)
+            # for m in self_model.__dep_mapping[self_model]:
+            #     connector = m.get_connector_column(self_model)
+            #     if connector.rel.reverse_name == attr:
+            #         return session.query(m).join(self_model).subquery()
+
+            raise FieldNotExist(attr)
 
     @property
     def sql(self) -> str:

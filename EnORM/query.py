@@ -16,21 +16,26 @@ from .exceptions import EntityError, FieldNotExist, MethodChainingError, Multipl
 class Record(UserDict):
     """Docstring here."""
 
-    def __init__(self, d: dict, query: Query) -> None:
+    def __init__(self, d: Dict[str, Any], query: Query) -> None:
         super().__init__(d)
         self.query = query
 
     def __getattr__(self, attr: str) -> Any:
-        # if len(self.query.entities) == 1 and isinstance(self.query.entities[0], Type):
-        #     self_model = self.query.entities[0]
-        #     for c in columns:  # TODO: fix this
-        #         if c.rel is not None and c.rel.foreign_model == self_model and c.rel.reverse_name == attr:
-        #             return self.query.session.query(c.model).join(self_model).subquery()
+        try:
+            return getattr(self, attr)
+        except AttributeError:
+            if self.is_row:
+                try:
+                    self_model = self.query.entities[0].denotee  # type: ignore
+                except AttributeError:
+                    self_model = self.query.entities[0]
 
-        if attr not in self:
+                for m in self_model.__dep_mapping[self_model]:  # type: ignore
+                    connector = m.get_connector_column(self_model)
+                    if connector.rel.reverse_name == attr:
+                        return self.query.session.query(m).join(self_model).subquery()  # type: ignore
+
             raise FieldNotExist(attr)
-
-        return self[attr]
 
     def __setattr__(self, attr: str, value: Any) -> None:
         if attr not in self:
@@ -39,6 +44,13 @@ class Record(UserDict):
         for k, v in self.items():
             self.query.filter_by(**{k: v}).update(**{attr: value})
             break
+
+    @property
+    def is_row(self) -> bool:
+        return len(self.query.entities) == 1 and (
+            isinstance(self.query.entities[0], type)
+            or (isinstance(self.query.entities[0], Label) and isinstance(self.query.entities[0].denotee, type))
+        )
 
 
 class QuerySet:
@@ -209,7 +221,7 @@ class Query:
 
     def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
         self_model = self.mapped_class or self.entities[0].model  # type: ignore
-        if isinstance(mapped, Type):  # type: ignore
+        if isinstance(mapped, type):
             connector_column = self_model.get_connector_column(mapped)
             if connector_column is None:
                 raise EntityError("No connector key found between %s and %s." % (self_model.__name__, mapped.__name__))
@@ -226,7 +238,7 @@ class Query:
                             self_model.__name__,
                             connector_column.variable_name,
                             mapped.__name__,
-                            mapped.primary_key_col_name(),
+                            mapped.get_primary_key_column().variable_name,
                         )
                     ),
                 )
@@ -319,10 +331,7 @@ class Query:
         return bool(self.first())
 
     def count(self) -> int:
-        try:
-            results = self.all()
-        except QueryFormatError:
-            raise
+        results = self.all()
 
         return len(results)
 
