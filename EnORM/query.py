@@ -20,7 +20,7 @@ class Record(UserDict):
     def __getattr__(self, attr: str) -> Any:
         try:
             return getattr(self, attr)
-        except AttributeError:
+        except AttributeError as e:
             if self.is_row:
                 try:
                     self_model = self.query.entities[0].denotee
@@ -32,7 +32,7 @@ class Record(UserDict):
                     if connector.rel.reverse_name == attr:
                         return Query(m).join(self_model).subquery()
 
-            raise FieldNotExist(attr)
+            raise FieldNotExist(attr) from e
 
     def __setattr__(self, attr: str, value: Any) -> None:
         if attr not in self:
@@ -234,9 +234,8 @@ class Query:
         elif isinstance(mapped, Subquery):
             if not exprs:
                 raise EntityError("Cannot join subquery without connector expressions.")
-            else:
-                self._add_to_data("join", mapped.full_sql)
-                self.data["on"] = exprs
+            self._add_to_data("join", mapped.full_sql)
+            self.data["on"] = exprs
 
         return self
 

@@ -77,19 +77,14 @@ class Model:
 
     @classmethod
     def get_primary_key_column(cls) -> Optional[Column]:
-        for _, c in cls.get_fields().items():
-            if c.primary_key:
-                return c
-
-        return None
+        return next((c for _, c in cls.get_fields().items() if c.primary_key), None)
 
     @classmethod
     def get_connector_column(cls, mapped: Type) -> Optional[Column]:
-        for _, c in cls.get_fields().items():
-            if c.rel is not None and c.rel.foreign_model == mapped:
-                return c
-
-        return None
+        return next(
+            (c for _, c in cls.get_fields().items() if c.rel is not None and c.rel.foreign_model == mapped),
+            None,
+        )
 
     @classmethod
     def get_type_pref(cls, field: str, val: Column) -> str:
@@ -133,14 +128,14 @@ class Model:
     def __getattr__(self, attr: str) -> Any:
         try:
             return getattr(self, attr)
-        except AttributeError:
+        except AttributeError as e:
             self_model = type(self)
             for m in self_model.__dep_mapping[self_model]:
                 connector = m.get_connector_column(self_model)
                 if connector.rel.reverse_name == attr:
                     return Query(m).join(self_model).subquery()
 
-            raise FieldNotExist(attr)
+            raise FieldNotExist(attr) from e
 
     @property
     def sql(self) -> str:
