@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from .column import Column, Label
 from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
+from .query import Query
 from .types import Float, Integer, Serial, String
 
 
@@ -34,8 +35,8 @@ class Model:
         cls.model_definition_sqls.append(def_sql)
 
         for field, val in fields.items():
-            val.model = cls  # type: ignore
-            val.variable_name = field  # type: ignore
+            val.model = cls
+            val.variable_name = field
             if val.rel is not None:
                 cls.__dep_mapping[val.rel.foreign_model] = [*cls.__dep_mapping.get(val.rel.foreign_model, []), cls]
 
@@ -133,11 +134,11 @@ class Model:
         try:
             return getattr(self, attr)
         except AttributeError:
-            # self_model = type(self)
-            # for m in self_model.__dep_mapping[self_model]:
-            #     connector = m.get_connector_column(self_model)
-            #     if connector.rel.reverse_name == attr:
-            #         return session.query(m).join(self_model).subquery()
+            self_model = type(self)
+            for m in self_model.__dep_mapping[self_model]:
+                connector = m.get_connector_column(self_model)
+                if connector.rel.reverse_name == attr:
+                    return Query(m).join(self_model).subquery()
 
             raise FieldNotExist(attr)
 

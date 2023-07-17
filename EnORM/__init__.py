@@ -1,5 +1,6 @@
-from .column import CASCADE, Column, ForeignKey
-from .database import DBSession
+from .column import Column
+from .database import DBEngine, DBSession
+from .fkey import CASCADE, ForeignKey
 from .model import Model
 from .types import Float, Integer, Serial, String
 
@@ -8,8 +9,9 @@ __version__ = "1.0.1"
 __all__ = [
     "CASCADE",
     "Column",
-    "ForeignKey",
+    "DBEngine",
     "DBSession",
+    "ForeignKey",
     "Model",
     "Float",
     "Integer",

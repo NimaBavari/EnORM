@@ -13,11 +13,11 @@ from .query import Query
 class DBEngine:
     """Docstring here."""
 
-    def __init__(self, conn_str: str) -> None:
-        self.conn_str = conn_str
+    active_instance = None
 
-    def connect(self) -> pyodbc.Connection:
-        return pyodbc.connect(self.conn_str)
+    def __init__(self, conn_str: str) -> None:
+        self.conn = pyodbc.connect(conn_str)
+        self.cursor = self.conn.cursor()
 
 
 class DBSession:
@@ -31,22 +31,21 @@ class DBSession:
 
         return cls._instance
 
-    def __init__(self, conn_str: str) -> None:
-        self.engine = DBEngine(conn_str)
-        self._conn = self.engine.connect()
-        self._cursor = self._conn.cursor()
+    def __init__(self, engine: DBEngine) -> None:
+        self.engine = engine
+        DBEngine.active_instance = self.engine
         self.queue: List[Model] = []
         self.accumulator: List[Query] = []
 
         try:
-            for query in Model.model_definition_sqls:
-                self._cursor.execute(query)
+            for sql in Model.model_definition_sqls:
+                self.engine.cursor.execute(sql)
         except pyodbc.DatabaseError:
             raise
 
         Model.model_definition_sqls = []
 
-        self._conn.commit()
+        self.engine.conn.commit()
 
     def __enter__(self) -> Optional[DBSession]:
         return self._instance
@@ -57,22 +56,22 @@ class DBSession:
         exc_value: BaseException,
         traceback: TracebackType,
     ) -> None:
-        if self._conn:
+        if self.engine.conn:
             try:
                 self.commit_adds()
             except exc_type:
-                self._conn.rollback()
+                self.engine.conn.rollback()
                 raise
             finally:
-                self._cursor.close()
-                self._conn.close()
+                self.engine.cursor.close()
+                self.engine.conn.close()
                 self._instance = None
 
     def __iter__(self) -> Iterator[Model]:
         yield from self.queue
 
     def query(self, *fields: Union[Type, BaseColumn, Label]) -> Query:
-        q = Query(*fields, session=self)
+        q = Query(*fields)
         self.accumulator.append(q)
         return q
 
@@ -81,16 +80,16 @@ class DBSession:
 
     def save(self) -> None:
         for q in self.accumulator:
-            self._cursor.execute(q._sql)
+            self.engine.cursor.execute(q._sql)
 
-        self._conn.commit()
+        self.engine.conn.commit()
 
         self.accumulator = []
 
     def commit_adds(self) -> None:
         for itm in self:
-            self._cursor.execute(itm.sql, *itm.attrs.values())
+            self.engine.cursor.execute(itm.sql, *itm.attrs.values())
 
-        self._conn.commit()
+        self.engine.conn.commit()
 
         self.queue = []

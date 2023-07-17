@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import Any, Iterable, Optional, Type, Union
 
 from .exceptions import IncompatibleArgument
+from .fkey import ForeignKey
 from .types import Serial, String
-
-CASCADE = "cascade"
 
 
 class Label:
@@ -20,15 +19,15 @@ class BaseColumn:
     """Docstring here."""
 
     def __init__(self) -> None:
-        self.compound_variable_name = "%s, %s" % (self.view_name, self.variable_name)  # type: ignore
+        self.compound_variable_name = "%s, %s" % (self.view_name, self.variable_name)
 
     def binary_ops(self, other: Any, operator: str) -> str:
-        return "'%s'.'%s' %s %s" % (self.view_name, self.variable_name, operator, other)  # type: ignore
+        return "'%s'.'%s' %s %s" % (self.view_name, self.variable_name, operator, other)
 
-    def __eq__(self, other: Any) -> str:  # type: ignore
+    def __eq__(self, other: Any) -> str:
         return self.binary_ops(other, "=")
 
-    def __ne__(self, other: Any) -> str:  # type: ignore
+    def __ne__(self, other: Any) -> str:
         return self.binary_ops(other, "<>")
 
     def __lt__(self, other: Any) -> str:
@@ -58,27 +57,6 @@ class BaseColumn:
         return Label(self, alias)
 
 
-class ForeignKey:
-    """Docstring here."""
-
-    def __init__(
-        self,
-        foreign_model: Type,
-        *,
-        reverse_name: str,
-        on_delete: Optional[str] = None,
-        on_update: Optional[str] = None,
-    ) -> None:
-        self.foreign_model = foreign_model
-        self.reverse_name = reverse_name
-        self.on_delete = on_delete
-        self.on_update = on_update
-        if self.on_delete not in [None, CASCADE]:
-            raise IncompatibleArgument("Wrong value for `on_delete`")
-        if self.on_update not in [None, CASCADE]:
-            raise IncompatibleArgument("Wrong value for `on_update`")
-
-
 class Column(BaseColumn):
     """Docstring here."""
 
@@ -98,7 +76,7 @@ class Column(BaseColumn):
         self.primary_key = primary_key
         self.default = default
         self.nullable = nullable
-        self.view_name = self.model.get_table_name()  # type: ignore
+        self.view_name = self.model.get_table_name()
         if self.primary_key and self.type not in [Serial, String]:
             raise IncompatibleArgument("Wrong type for primary key.")
 

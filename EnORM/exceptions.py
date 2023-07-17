@@ -26,7 +26,7 @@ class ValueOutOfBound(Fixed):
     """Docstring here."""
 
     def __init__(self, type_name: str) -> None:
-        self.message = "%s value is out of bounds." % type_name
+        self.message = "`%s` value is out of bounds." % type_name
         super().__init__()
 
 

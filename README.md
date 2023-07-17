@@ -6,7 +6,7 @@ Get ready for an EnORMous database experience!
 ## Example Usage
 
 ```python
-from EnORM import CASCADE, Column, DBSession, Float, ForeignKey, Integer, Model, Serial, String
+from EnORM import CASCADE, Column, DBEngine, DBSession, Float, ForeignKey, Integer, Model, Serial, String
 
 
 class Company(Model):
@@ -26,7 +26,9 @@ class Employee(Model):
     company_id = Column(Serial, None, ForeignKey(Company, reverse_name="employees", on_delete=CASCADE))
 
 
-with DBSession('postgresql://user:secret@localhost:5432/my_db') as session:
+eng = DBEngine("postgresql://user:secret@localhost:5432/my_db")
+
+with DBSession(eng) as session:
     the_company = session.query(Company).filter(Company.country == 'United Kingdom').first()
 
     new_employee = Employee(full_name='Nima Bavari Goudarzi', salary=64320.00, role='engineer', company_id=the_company.id)

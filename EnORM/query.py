@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from collections import UserDict
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
 from .column import BaseColumn, Column, Label, VirtualColumn
-
-if TYPE_CHECKING:
-    from .database import DBSession
-
+from .database import DBEngine
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 
@@ -26,14 +23,14 @@ class Record(UserDict):
         except AttributeError:
             if self.is_row:
                 try:
-                    self_model = self.query.entities[0].denotee  # type: ignore
+                    self_model = self.query.entities[0].denotee
                 except AttributeError:
                     self_model = self.query.entities[0]
 
-                for m in self_model.__dep_mapping[self_model]:  # type: ignore
+                for m in self_model.__dep_mapping[self_model]:
                     connector = m.get_connector_column(self_model)
                     if connector.rel.reverse_name == attr:
-                        return self.query.session.query(m).join(self_model).subquery()  # type: ignore
+                        return Query(m).join(self_model).subquery()
 
             raise FieldNotExist(attr)
 
@@ -41,9 +38,7 @@ class Record(UserDict):
         if attr not in self:
             raise FieldNotExist(attr)
 
-        for k, v in self.items():
-            self.query.filter_by(**{k: v}).update(**{attr: value})
-            break
+        self.query.filter_by(**self).update(**{attr: value})
 
     @property
     def is_row(self) -> bool:
@@ -90,7 +85,7 @@ class Subquery:
     subquery_idx = 0
 
     def __init__(self, inner_sql: str, column_names: List[str]) -> None:
-        Subquery.subquery_idx += 1
+        type(self).subquery_idx += 1
         self.inner_sql = inner_sql
         self.column_names = column_names
         self.view_name = "anon_%d" % self.subquery_idx
@@ -113,25 +108,19 @@ class Query:
     :meth:`.database.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
     :class:`.query.Query` directly.
 
-    Gets as arguments the
+    Gets as an argument the
 
-    :param entities: -- which correspond to the "columns" of the matched results, and
-
-    :param session:, which is the current session.
+    :param entities: -- which correspond to the "columns" of the matched results.
 
     .. warning::
 
         :param entities: may contain at most one `MappedClass` instance.
 
-    A :class:`.query.Record` object is a `MappedClass` object if the only entity in :param entities: is `MappedClass`
-    (annotated with `Type`); otherwise, it is an object of :class:`.query.Record` of a tuple, containing the other
-    entities, each of which is attributed to the `MappedClass` object. Note that `MappedClass` is any subclass of
-    :class:`.model.Model`.
+    NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
     """
 
-    def __init__(self, *entities: Union[Type, BaseColumn, Label], session: DBSession) -> None:
+    def __init__(self, *entities: Union[Type, BaseColumn, Label]) -> None:
         self.entities = entities
-        self.session = session
         self.data: Dict[str, List[Any]] = {}
         if not self.entities:
             raise EntityError("No fields specified for querying.")
@@ -215,12 +204,12 @@ class Query:
 
             :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
         """
-        model = self.mapped_class or self.entities[0].model  # type: ignore
+        model = self.mapped_class or self.entities[0].model
         criteria = [eval("%s.%s == %s" % (model.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
     def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
-        self_model = self.mapped_class or self.entities[0].model  # type: ignore
+        self_model = self.mapped_class or self.entities[0].model
         if isinstance(mapped, type):
             connector_column = self_model.get_connector_column(mapped)
             if connector_column is None:
@@ -228,7 +217,7 @@ class Query:
 
             self._add_to_data("join", mapped.get_table_name())
             if exprs:
-                self.data["on"] = exprs  # type: ignore
+                self.data["on"] = exprs
             else:
                 self._add_to_data(
                     "on",
@@ -247,7 +236,7 @@ class Query:
                 raise EntityError("Cannot join subquery without connector expressions.")
             else:
                 self._add_to_data("join", mapped.full_sql)
-                self.data["on"] = exprs  # type: ignore
+                self.data["on"] = exprs
 
         return self
 
@@ -307,10 +296,11 @@ class Query:
         return query_set[0] if query_set else None
 
     def all(self) -> QuerySet:
+        engine = DBEngine.active_instance
         try:
-            self.session._cursor.execute(self._sql)
-            col_names = [col[0] for col in self.session._cursor.description]
-            results = [Record(dict(zip(col_names, row)), self) for row in self.session._cursor.fetchall()]
+            engine.cursor.execute(self._sql)
+            col_names = [col[0] for col in engine.cursor.description]
+            results = [Record(dict(zip(col_names, row)), self) for row in engine.cursor.fetchall()]
         except pyodbc.DatabaseError:
             raise QueryFormatError
 
