@@ -68,3 +68,9 @@ class MultipleResultsFound(Fixed):
     """Docstring here."""
 
     message = "Multiple results found."
+
+
+class OrphanColumn(Fixed):
+    """Docstring here."""
+
+    message = "Cannot initialize `Column` outside a `Model`."

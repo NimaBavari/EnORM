@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, Type, Union
+from typing import Any, Dict, Iterable, Optional, Type, Union
 
-from .exceptions import IncompatibleArgument
+from .exceptions import IncompatibleArgument, OrphanColumn
 from .fkey import ForeignKey
 from .types import Serial, String
 
@@ -17,9 +17,6 @@ class Label:
 
 class BaseColumn:
     """Docstring here."""
-
-    def __init__(self) -> None:
-        self.compound_variable_name = "%s, %s" % (self.view_name, self.variable_name)
 
     def binary_ops(self, other: Any, operator: str) -> str:
         return "'%s'.'%s' %s %s" % (self.view_name, self.variable_name, operator, other)
@@ -56,9 +53,15 @@ class BaseColumn:
     def label(self, alias: str) -> Label:
         return Label(self, alias)
 
+    @property
+    def compound_variable_name(self) -> str:
+        return "%s, %s" % (self.view_name, self.variable_name)
+
 
 class Column(BaseColumn):
     """Docstring here."""
+
+    objects: Dict[int, Dict[str, Any]] = {}
 
     def __init__(
         self,
@@ -76,7 +79,6 @@ class Column(BaseColumn):
         self.primary_key = primary_key
         self.default = default
         self.nullable = nullable
-        self.view_name = self.model.get_table_name()
         if self.primary_key and self.type not in [Serial, String]:
             raise IncompatibleArgument("Wrong type for primary key.")
 
@@ -97,7 +99,25 @@ class Column(BaseColumn):
             if not isinstance(self.length, int):
                 raise IncompatibleArgument("`String` type should have an integer length.")
 
-        super().__init__()
+    @property
+    def model(self) -> Type:
+        try:
+            m = self.objects[id(self)]["model"]
+        except KeyError:
+            raise OrphanColumn
+        return m
+
+    @property
+    def variable_name(self) -> str:
+        try:
+            v = self.objects[id(self)]["variable_name"]
+        except KeyError:
+            raise OrphanColumn
+        return v
+
+    @property
+    def view_name(self) -> str:
+        return self.model.get_table_name()
 
 
 class VirtualColumn(BaseColumn):
@@ -106,4 +126,3 @@ class VirtualColumn(BaseColumn):
     def __init__(self, variable_name, view_name) -> None:
         self.variable_name = variable_name
         self.view_name = view_name
-        super().__init__()

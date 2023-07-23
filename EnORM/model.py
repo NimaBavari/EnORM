@@ -35,8 +35,7 @@ class Model:
         cls.model_definition_sqls.append(def_sql)
 
         for field, val in fields.items():
-            val.model = cls
-            val.variable_name = field
+            Column.objects[id(val)] = {"model": cls, "variable_name": field}
             if val.rel is not None:
                 cls.__dep_mapping[val.rel.foreign_model] = [*cls.__dep_mapping.get(val.rel.foreign_model, []), cls]
 
@@ -73,7 +72,7 @@ class Model:
 
     @classmethod
     def get_table_name(cls) -> str:
-        return cls.__table__ or "%ss" % cls.__qualname__.lower()
+        return cls.__table__ or "%ss" % cls.__qualname__.split(".")[-1].lower()
 
     @classmethod
     def get_primary_key_column(cls) -> Optional[Column]:
@@ -126,10 +125,11 @@ class Model:
         return Label(cls, alias)
 
     def __getattr__(self, attr: str) -> Any:
+        self_model = type(self)
         try:
-            return getattr(self, attr)
-        except AttributeError as e:
-            self_model = type(self)
+            fields = self_model.get_fields()
+            return fields[attr]
+        except KeyError as e:
             for m in self_model.__dep_mapping[self_model]:
                 connector = m.get_connector_column(self_model)
                 if connector.rel.reverse_name == attr:

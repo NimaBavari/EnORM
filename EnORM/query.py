@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterator, List, Optional, Type, Union
 import pyodbc
 
 from .column import BaseColumn, Column, Label, VirtualColumn
-from .database import DBEngine
+from .db_engine import DBEngine
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 
@@ -105,7 +105,7 @@ class Query:
     """Main abstraction for querying for the whole ORM.
 
     There are two ways to generate :class:`.query.Query` objects: either by calling the
-    :meth:`.database.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
+    :meth:`.db_session.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
     :class:`.query.Query` directly.
 
     Gets as an argument the
@@ -219,18 +219,18 @@ class Query:
             if exprs:
                 self.data["on"] = exprs
             else:
-                self._add_to_data(
-                    "on",
-                    eval(
-                        "%s.%s == %s.%s"
-                        % (
-                            self_model.__name__,
-                            connector_column.variable_name,
-                            mapped.__name__,
-                            mapped.get_primary_key_column().variable_name,
-                        )
-                    ),
+                exec("from %s import %s" % (self_model.__module__, self_model.__name__))
+                exec("from %s import %s" % (mapped.__module__, mapped.__name__))
+                expr = eval(
+                    "%s.%s == %s.%s"
+                    % (
+                        self_model.__name__,
+                        connector_column.variable_name,
+                        mapped.__name__,
+                        mapped.get_primary_key_column().variable_name,
+                    )
                 )
+                self._add_to_data("on", expr)
         elif isinstance(mapped, Subquery):
             if not exprs:
                 raise EntityError("Cannot join subquery without connector expressions.")
@@ -344,7 +344,7 @@ class Query:
 
     def parse(self) -> str:
         parsed_str = ""
-        if self.data["select"]:
+        if "select" in self.data:
             column_seq = ", ".join(
                 "'%s'.'%s' AS %s" % (*s.split(", "),) if len(s.split(", ")) == 3 else "'%s'.'%s'"
                 for s in self.data["select"]
@@ -353,41 +353,41 @@ class Query:
             if "distinct" in self.data:
                 column_seq = "DISTINCT %s" % column_seq
             parsed_str += "SELECT %s FROM %s" % (column_seq, table)
-        elif self.data["delete"]:
+        elif "delete" in self.data:
             table = self.data["from"][0]
             parsed_str = "DELETE FROM %s" % table
-        elif self.data["update"]:
+        elif "update" in self.data:
             table = self.data["update"][0].get_table_name()
             fields_values_seq = ", ".join("%s = %s" % (field, value) for field, value in self.data["set"])
             parsed_str = "UPDATE %s SET %s" % (table, fields_values_seq)
 
-        if self.data["from_as"]:
+        if "from_as" in self.data:
             parsed_str += " AS %s" % self.data["from_as"][0]
 
-        if self.data["where"]:
+        if "where" in self.data:
             condition = " AND ".join(expr for expr in self.data["where"])
             parsed_str += " WHERE %s" % condition
 
-        if self.data["join"]:
+        if "join" in self.data:
             condition = " AND ".join(expr for expr in self.data["on"])
             parsed_str += " JOIN %s ON %s" % (self.data["join"][0], condition)
 
-        if self.data["group_by"]:
+        if "group_by" in self.data:
             column_name_seq = ", ".join(self.data["group_by"])
             parsed_str = " GROUP BY %s" % column_name_seq
 
-        if self.data["having"]:
+        if "having" in self.data:
             condition = " AND ".join(expr for expr in self.data["having"])
             parsed_str += " HAVING %s" % condition
 
-        if self.data["order_by"]:
+        if "order_by" in self.data:
             column_name_seq = ", ".join(self.data["order_by"])
             parsed_str = " ORDER BY %s" % column_name_seq
 
-        if self.data["limit"]:
+        if "limit" in self.data:
             parsed_str += " LIMIT %s" % self.data["limit"][0]
 
-        if self.data["offset"]:
+        if "offset" in self.data:
             parsed_str += " OFFSET %s" % self.data["offset"][0]
 
         if "desc" in self.data:

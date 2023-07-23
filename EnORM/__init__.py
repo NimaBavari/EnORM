@@ -1,5 +1,6 @@
 from .column import Column
-from .database import DBEngine, DBSession
+from .db_engine import DBEngine
+from .db_session import DBSession
 from .fkey import CASCADE, ForeignKey
 from .model import Model
 from .types import Float, Integer, Serial, String
