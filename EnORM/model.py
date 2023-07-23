@@ -40,10 +40,8 @@ class Model:
                 cls.__dep_mapping[val.rel.foreign_model] = [*cls.__dep_mapping.get(val.rel.foreign_model, []), cls]
 
     def __init__(self, **attrs: Any) -> None:
-        self.attrs = attrs
-
         fields = self.get_fields()
-        for key, val in self.attrs.items():
+        for key, val in attrs.items():
             if key not in fields.keys():
                 raise FieldNotExist(key)
 
@@ -51,17 +49,21 @@ class Model:
             if not isinstance(val, expected_type):
                 raise WrongFieldType(key, expected_type, type(val))
 
+            setattr(self, key, val)
+
         for field, val in fields.items():
-            if field in self.attrs.keys():
+            if field in attrs.keys():
                 continue
 
             if field == "id":
                 continue
 
-            if val.nullable:
+            if val.default:
+                setattr(self, field, val.default)
                 continue
 
-            if val.default:
+            if val.nullable:
+                setattr(self, field, None)
                 continue
 
             raise MissingRequiredField(field)
@@ -133,7 +135,10 @@ class Model:
             for m in self_model.__dep_mapping[self_model]:
                 connector = m.get_connector_column(self_model)
                 if connector.rel.reverse_name == attr:
-                    return Query(m).join(self_model).subquery()
+                    condition_dict = {
+                        connector.variable_name: getattr(self, self.get_primary_key_column().variable_name)
+                    }
+                    return Query(m).join(self_model).filter_by(**condition_dict).subquery()
 
             raise FieldNotExist(attr) from e
 

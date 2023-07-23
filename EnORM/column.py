@@ -19,7 +19,8 @@ class BaseColumn:
     """Docstring here."""
 
     def binary_ops(self, other: Any, operator: str) -> str:
-        return "'%s'.'%s' %s %s" % (self.view_name, self.variable_name, operator, other)
+        other_compound = "%s.%s" % (other.view_name, other.variable_name) if isinstance(other, BaseColumn) else other
+        return "%s.%s %s %s" % (self.view_name, self.variable_name, operator, other_compound)
 
     def __eq__(self, other: Any) -> str:
         return self.binary_ops(other, "=")

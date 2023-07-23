@@ -19,8 +19,8 @@ class Record(UserDict):
 
     def __getattr__(self, attr: str) -> Any:
         try:
-            return getattr(self, attr)
-        except AttributeError as e:
+            return self[attr]
+        except KeyError as e:
             if self.is_row:
                 try:
                     self_model = self.query.entities[0].denotee
@@ -30,7 +30,10 @@ class Record(UserDict):
                 for m in self_model.__dep_mapping[self_model]:
                     connector = m.get_connector_column(self_model)
                     if connector.rel.reverse_name == attr:
-                        return Query(m).join(self_model).subquery()
+                        condition_dict = {
+                            connector.variable_name: getattr(self, self_model.get_primary_key_column().variable_name)
+                        }
+                        return Query(m).join(self_model).filter_by(**condition_dict).subquery()
 
             raise FieldNotExist(attr) from e
 
@@ -169,13 +172,44 @@ class Query:
         """
         return self.parse()
 
+    def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
+        self_model = self.mapped_class or self.entities[0].model
+        if isinstance(mapped, type):
+            connector_column = self_model.get_connector_column(mapped)
+            if connector_column is None:
+                raise EntityError("No connector key found between %s and %s." % (self_model.__name__, mapped.__name__))
+
+            self._add_to_data("join", mapped.get_table_name())
+            if exprs:
+                self.data["on"] = exprs
+            else:
+                exec("from %s import %s" % (self_model.__module__, self_model.__name__), globals(), globals())
+                exec("from %s import %s" % (mapped.__module__, mapped.__name__), globals(), globals())
+                expr = eval(
+                    "%s.%s == %s.%s"
+                    % (
+                        self_model.__name__,
+                        connector_column.variable_name,
+                        mapped.__name__,
+                        mapped.get_primary_key_column().variable_name,
+                    )
+                )
+                self._add_to_data("on", expr)
+        elif isinstance(mapped, Subquery):
+            if not exprs:
+                raise EntityError("Cannot join subquery without connector expressions.")
+            self._add_to_data("join", mapped.full_sql)
+            self.data["on"] = exprs
+
+        return self
+
     def filter(self, *exprs: Any) -> Query:
         """Exerts a series of valid comparison expressions as filtering criteria to the current instance.
 
         E.g.::
 
             session.query(User, email_address, last_visited)
-                .filter(User.first_name == 'Nima', User.age > 28)
+                .filter(User.first_name == "Nima", User.age > 28)
                 .first()
 
         Any number of criteria may be specified as separated by a comma.
@@ -205,39 +239,9 @@ class Query:
             :meth:`.query.Query.filter` - filter on valid comparison expressions as criteria.
         """
         model = self.mapped_class or self.entities[0].model
+        exec("from %s import %s" % (model.__module__, model.__name__), globals(), globals())
         criteria = [eval("%s.%s == %s" % (model.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
-
-    def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
-        self_model = self.mapped_class or self.entities[0].model
-        if isinstance(mapped, type):
-            connector_column = self_model.get_connector_column(mapped)
-            if connector_column is None:
-                raise EntityError("No connector key found between %s and %s." % (self_model.__name__, mapped.__name__))
-
-            self._add_to_data("join", mapped.get_table_name())
-            if exprs:
-                self.data["on"] = exprs
-            else:
-                exec("from %s import %s" % (self_model.__module__, self_model.__name__))
-                exec("from %s import %s" % (mapped.__module__, mapped.__name__))
-                expr = eval(
-                    "%s.%s == %s.%s"
-                    % (
-                        self_model.__name__,
-                        connector_column.variable_name,
-                        mapped.__name__,
-                        mapped.get_primary_key_column().variable_name,
-                    )
-                )
-                self._add_to_data("on", expr)
-        elif isinstance(mapped, Subquery):
-            if not exprs:
-                raise EntityError("Cannot join subquery without connector expressions.")
-            self._add_to_data("join", mapped.full_sql)
-            self.data["on"] = exprs
-
-        return self
 
     def group_by(self, *columns: Optional[Column]) -> Query:
         column_names = [column.compound_variable_name for column in columns if column is not None]
@@ -346,7 +350,7 @@ class Query:
         parsed_str = ""
         if "select" in self.data:
             column_seq = ", ".join(
-                "'%s'.'%s' AS %s" % (*s.split(", "),) if len(s.split(", ")) == 3 else "'%s'.'%s'"
+                "%s.%s AS %s" % (*s.split(", "),) if len(s.split(", ")) == 3 else "%s.%s" % (*s.split(", "),)
                 for s in self.data["select"]
             )
             table = self.data["from"][0]
@@ -364,13 +368,13 @@ class Query:
         if "from_as" in self.data:
             parsed_str += " AS %s" % self.data["from_as"][0]
 
-        if "where" in self.data:
-            condition = " AND ".join(expr for expr in self.data["where"])
-            parsed_str += " WHERE %s" % condition
-
         if "join" in self.data:
             condition = " AND ".join(expr for expr in self.data["on"])
             parsed_str += " JOIN %s ON %s" % (self.data["join"][0], condition)
+
+        if "where" in self.data:
+            condition = " AND ".join(expr for expr in self.data["where"])
+            parsed_str += " WHERE %s" % condition
 
         if "group_by" in self.data:
             column_name_seq = ", ".join(self.data["group_by"])

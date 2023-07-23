@@ -51,6 +51,10 @@ class TestModel(unittest.TestCase):
 
     def test_model_existing_compound_attr(self) -> None:
         self.assertIsInstance(PERSON.pets, Subquery)
+        self.assertEqual(
+            PERSON.pets.inner_sql,
+            "SELECT pets.* FROM pets JOIN humans ON pets.owner_id = humans.id WHERE pets.owner_id = %s" % PERSON.id,
+        )
 
 
 class TestColumn(unittest.TestCase):
@@ -63,18 +67,18 @@ class TestColumn(unittest.TestCase):
         self.assertEqual(MODEL_INSTANCE.name, "Sakura")
         self.assertEqual(MODEL_INSTANCE.age, 5)
 
-        self.assertEqual(MODEL_INSTANCE.name.model, Pet)
-        self.assertEqual(MODEL_INSTANCE.name.variable_name, "name")
-        self.assertEqual(MODEL_INSTANCE.name.view_name, "pets")
+        self.assertEqual(MODEL_CLS.name.model, Pet)
+        self.assertEqual(MODEL_CLS.name.variable_name, "name")
+        self.assertEqual(MODEL_CLS.name.view_name, "pets")
 
-        self.assertEqual(MODEL_INSTANCE.age.model, Pet)
-        self.assertEqual(MODEL_INSTANCE.age.variable_name, "age")
-        self.assertEqual(MODEL_INSTANCE.age.view_name, "pets")
+        self.assertEqual(MODEL_CLS.age.model, Pet)
+        self.assertEqual(MODEL_CLS.age.variable_name, "age")
+        self.assertEqual(MODEL_CLS.age.view_name, "pets")
 
-        self.assertEqual(MODEL_INSTANCE.owner_id.model, Pet)
-        self.assertEqual(MODEL_INSTANCE.owner_id.variable_name, "owner_id")
-        self.assertEqual(MODEL_INSTANCE.owner_id.view_name, "pets")
+        self.assertEqual(MODEL_CLS.owner_id.model, Pet)
+        self.assertEqual(MODEL_CLS.owner_id.variable_name, "owner_id")
+        self.assertEqual(MODEL_CLS.owner_id.view_name, "pets")
 
     def test_column_attr_types_with_model_context(self) -> None:
-        self.assertEqual(MODEL_INSTANCE.name.type, str)
-        self.assertEqual(MODEL_INSTANCE.age.type, int)
+        self.assertEqual(MODEL_CLS.name.type, str)
+        self.assertEqual(MODEL_CLS.age.type, int)
