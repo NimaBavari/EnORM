@@ -34,5 +34,5 @@ with DBSession(eng) as session:
     new_employee = Employee(full_name="Nima Bavari Goudarzi", salary=64320.00, role="engineer", company_id=the_company.id)
     session.add(new_employee)
     
-    sharks = session.query(Employee, "full_name", "company_id").filter(Employee.salary > 90000.00).all()
+    sharks = session.query(Employee, Employee.full_name, Employee.company_id).filter(Employee.salary > 90000.00).all()
 ```

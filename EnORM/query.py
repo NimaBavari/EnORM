@@ -349,11 +349,17 @@ class Query:
     def parse(self) -> str:
         parsed_str = ""
         if "select" in self.data:
+            table = self.data["from"][0]
+
+            to_remove = "%s, *" % table
+            if len(self.data["select"]) > 1 and to_remove in self.data["select"]:
+                self.data["select"].remove(to_remove)
+
             column_seq = ", ".join(
                 "%s.%s AS %s" % (*s.split(", "),) if len(s.split(", ")) == 3 else "%s.%s" % (*s.split(", "),)
                 for s in self.data["select"]
             )
-            table = self.data["from"][0]
+
             if "distinct" in self.data:
                 column_seq = "DISTINCT %s" % column_seq
             parsed_str += "SELECT %s FROM %s" % (column_seq, table)

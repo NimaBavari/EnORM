@@ -1,11 +1,9 @@
 import unittest
 
-from EnORM.column import Column  # , VirtualColumn, Label
-from EnORM.exceptions import OrphanColumn
-from EnORM.fkey import CASCADE, ForeignKey
-from EnORM.model import Model
+from EnORM import CASCADE, Column, Float, ForeignKey, Integer, Model, Serial, String
+from EnORM.column import Label
+from EnORM.exceptions import FieldNotExist, OrphanColumn
 from EnORM.query import Subquery
-from EnORM.types import Float, Integer, Serial, String
 
 
 class Human(Model):
@@ -56,6 +54,16 @@ class TestModel(unittest.TestCase):
             "SELECT pets.* FROM pets JOIN humans ON pets.owner_id = humans.id WHERE pets.owner_id = %s" % PERSON.id,
         )
 
+    def test_model_nonexisting_compount_attr(self) -> None:
+        with self.assertRaises(FieldNotExist):
+            _ = PERSON.tots
+
+    def test_model_label(self) -> None:
+        table_as = FOREIGN_MAPPED.label("h")
+        self.assertIsInstance(table_as, Label)
+        self.assertEqual(table_as.denotee, FOREIGN_MAPPED)
+        self.assertEqual(table_as.text, "h")
+
 
 class TestColumn(unittest.TestCase):
     def test_column_state_outside_model_context(self) -> None:
@@ -82,3 +90,9 @@ class TestColumn(unittest.TestCase):
     def test_column_attr_types_with_model_context(self) -> None:
         self.assertEqual(MODEL_CLS.name.type, str)
         self.assertEqual(MODEL_CLS.age.type, int)
+
+    def test_column_label(self) -> None:
+        column_as = MODEL_CLS.age.label("pet_age")
+        self.assertIsInstance(column_as, Label)
+        self.assertEqual(column_as.denotee, MODEL_CLS.age)
+        self.assertEqual(column_as.text, "pet_age")
