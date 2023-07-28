@@ -1,8 +1,6 @@
 # EnORM for the next release: Plan
 
 * [ ] Complete testing
-  * [ ] DBEngine
-  * [ ] DBSession
   * [ ] ForeignKey
   * [ ] Record
   * [ ] QuerySet

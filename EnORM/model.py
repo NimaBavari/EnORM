@@ -40,8 +40,10 @@ class Model:
                 cls.__dep_mapping[val.rel.foreign_model] = [*cls.__dep_mapping.get(val.rel.foreign_model, []), cls]
 
     def __init__(self, **attrs: Any) -> None:
+        self.attrs = attrs
+
         fields = self.get_fields()
-        for key, val in attrs.items():
+        for key, val in self.attrs.items():
             if key not in fields.keys():
                 raise FieldNotExist(key)
 
@@ -52,7 +54,7 @@ class Model:
             setattr(self, key, val)
 
         for field, val in fields.items():
-            if field in attrs.keys():
+            if field in self.attrs.keys():
                 continue
 
             if field == "id":
