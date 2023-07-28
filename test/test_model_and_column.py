@@ -96,3 +96,11 @@ class TestColumn(unittest.TestCase):
         self.assertIsInstance(column_as, Label)
         self.assertEqual(column_as.denotee, MODEL_CLS.age)
         self.assertEqual(column_as.text, "pet_age")
+
+
+class TestForeignKey(unittest.TestCase):
+    def test_foreign_key(self):
+        self.assertIsInstance(MODEL_CLS.owner_id.rel, ForeignKey)
+        self.assertIs(MODEL_CLS.owner_id.rel.foreign_model, FOREIGN_MAPPED)
+        self.assertIs(MODEL_CLS.owner_id.rel.reverse_name, "pets")
+        self.assertIs(MODEL_CLS.owner_id.rel.on_delete, CASCADE)

@@ -1,7 +1,6 @@
 # EnORM for the next release: Plan
 
 * [ ] Complete testing
-  * [ ] ForeignKey
   * [ ] Record
   * [ ] QuerySet
   * [ ] Query

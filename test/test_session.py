@@ -62,7 +62,7 @@ class TestDBSession(unittest.TestCase):
         self.assertListEqual(
             Model.model_definition_sqls,
             [
-                """DROP TABLE humans IF EXISTS; CREATE TABLE humans (id SERIAL AUTOINCREMENT PRIMARY KEY, full_name VARCHAR (100) NOT NULL, age INTEGER);""",
+                "DROP TABLE humans IF EXISTS; CREATE TABLE humans (id SERIAL AUTOINCREMENT PRIMARY KEY, full_name VARCHAR (100) NOT NULL, age INTEGER);",
             ],
         )
 
