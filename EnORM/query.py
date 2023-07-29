@@ -1,3 +1,9 @@
+"""Contains :class:`.query.Query` and :class:`.query.Subquery`.
+
+Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record` and the class for
+any collection of them :class:`.query.QuerySet`.
+"""
+
 from __future__ import annotations
 
 from collections import UserDict

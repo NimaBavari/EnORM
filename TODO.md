@@ -7,6 +7,9 @@
   * [ ] Aggregate functions
   * [ ] Non-aggregate functions
 * [ ] Implement non-aggregate functions
-* [ ] Add docstrings: module level, class level, function level and method level
+* [ ] Add docstrings
+  * [ ] class level
+  * [ ] function level
+  * [ ] method level
 * [ ] Implement migrations
 * [ ] Add documentation

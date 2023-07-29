@@ -1,3 +1,5 @@
+"""Contains :class:`.db_session.DBSession`."""
+
 from __future__ import annotations
 
 from types import TracebackType

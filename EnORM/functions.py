@@ -1,3 +1,5 @@
+"""Contains ORM functions, both aggregate and non-aggregate ones."""
+
 from .column import BaseColumn
 
 

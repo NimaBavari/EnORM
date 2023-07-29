@@ -1,3 +1,5 @@
+"""Contains :class:`.fkey.ForeignKey`."""
+
 from typing import Optional, Type
 
 from .exceptions import IncompatibleArgument

@@ -1,3 +1,5 @@
+"""Contains column-like classes and :class:`.column.Label`."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, Iterable, Optional, Type, Union

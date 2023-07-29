@@ -1,3 +1,5 @@
+"""Contains :class:`.db_engine.DBEngine`."""
+
 import pyodbc
 
 

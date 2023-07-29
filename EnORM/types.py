@@ -1,3 +1,5 @@
+"""Contains definitions for custom types."""
+
 from .exceptions import ValueOutOfBound
 
 Integer = int

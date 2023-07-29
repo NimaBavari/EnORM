@@ -1,3 +1,5 @@
+"""Contains definitions for custom exceptions."""
+
 from typing import Any, Optional, Type
 
 
