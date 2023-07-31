@@ -4,8 +4,7 @@ from .column import BaseColumn
 
 
 def agg(field: BaseColumn, name_in_sql: str) -> BaseColumn:
-    v = field.compound_variable_name
-    field.compound_variable_name = "%s(%s)" % (name_in_sql, v)
+    field.aggs.append(name_in_sql)
     return field
 
 

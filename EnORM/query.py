@@ -119,7 +119,7 @@ class Query:
 
     Gets as an argument the
 
-    :param entities: -- which correspond to the "columns" of the matched results.
+        :param entities: -- which correspond to the "columns" of the matched results.
 
     .. warning::
 
@@ -154,9 +154,11 @@ class Query:
                     self._add_to_data("from", table_name)
                     self._add_to_data("from_as", item.text)
                 elif isinstance(item.denotee, BaseColumn):
-                    self._add_to_data("select", "%s, %s" % (item.denotee.compound_variable_name, item.text))
+                    comp_name = ", ".join([item.denotee.compound_variable_name, item.text, *item.denotee.aggs])
+                    item.denotee.aggs = []
+                    self._add_to_data("select", comp_name)
                     if isinstance(item.denotee, Column):
-                        self._add_to_data("from", table_name)
+                        self._add_to_data("from", item.denotee.view_name)
             else:
                 raise QueryFormatError
 
@@ -246,11 +248,13 @@ class Query:
         """
         model = self.mapped_class or self.entities[0].model
         exec("from %s import %s" % (model.__module__, model.__name__), globals(), globals())
-        criteria = [eval("%s.%s == %s" % (model.__name__, key, val)) for key, val in kwcrts.items()]
+        criteria = [eval("%s.%s == '%s'" % (model.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
-    def group_by(self, *columns: Optional[Column]) -> Query:
-        column_names = [column.compound_variable_name for column in columns if column is not None]
+    def group_by(self, *columns: Union[BaseColumn, str]) -> Query:
+        column_names = [
+            column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
+        ]
         if column_names:
             self.data["group_by"] = column_names
 
@@ -260,8 +264,10 @@ class Query:
         self._add_to_data("having", expr)
         return self
 
-    def order_by(self, *columns: Optional[Column]) -> Query:
-        column_names = [column.compound_variable_name for column in columns if column is not None]
+    def order_by(self, *columns: Union[BaseColumn, str]) -> Query:
+        column_names = [
+            column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
+        ]
         if column_names:
             self.data["order_by"] = column_names
 
@@ -353,6 +359,17 @@ class Query:
         self.data["delete"] = self.data.pop("select")
 
     def parse(self) -> str:
+        def parse_item(compound_name: str) -> str:
+            parts = compound_name.split(", ")
+            if len(parts) == 2:
+                return "%s.%s" % (*parts,)
+            if len(parts) == 3:
+                return "%s.%s AS %s" % (*parts,)
+            incomplete_res = "%s.%s" % (parts[0], parts[1])
+            for part in parts[:2:-1]:
+                incomplete_res = "%s(%s)" % (part, incomplete_res)
+            return "%s AS %s" % (incomplete_res, parts[2])
+
         parsed_str = ""
         if "select" in self.data:
             table = self.data["from"][0]
@@ -361,10 +378,7 @@ class Query:
             if len(self.data["select"]) > 1 and to_remove in self.data["select"]:
                 self.data["select"].remove(to_remove)
 
-            column_seq = ", ".join(
-                "%s.%s AS %s" % (*s.split(", "),) if len(s.split(", ")) == 3 else "%s.%s" % (*s.split(", "),)
-                for s in self.data["select"]
-            )
+            column_seq = ", ".join(parse_item(s) for s in self.data["select"])
 
             if "distinct" in self.data:
                 column_seq = "DISTINCT %s" % column_seq
@@ -389,16 +403,20 @@ class Query:
             parsed_str += " WHERE %s" % condition
 
         if "group_by" in self.data:
-            column_name_seq = ", ".join(self.data["group_by"])
-            parsed_str = " GROUP BY %s" % column_name_seq
+            column_name_seq = ", ".join(
+                name if len(name.split(", ")) == 1 else "%s.%s" % (*name.split(", "),) for name in self.data["group_by"]
+            )
+            parsed_str += " GROUP BY %s" % column_name_seq
 
         if "having" in self.data:
             condition = " AND ".join(expr for expr in self.data["having"])
             parsed_str += " HAVING %s" % condition
 
         if "order_by" in self.data:
-            column_name_seq = ", ".join(self.data["order_by"])
-            parsed_str = " ORDER BY %s" % column_name_seq
+            column_name_seq = ", ".join(
+                name if len(name.split(", ")) == 1 else "%s.%s" % (*name.split(", "),) for name in self.data["order_by"]
+            )
+            parsed_str += " ORDER BY %s" % column_name_seq
 
         if "limit" in self.data:
             parsed_str += " LIMIT %s" % self.data["limit"][0]

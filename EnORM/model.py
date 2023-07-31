@@ -11,7 +11,13 @@ from .types import Float, Integer, Serial, String
 
 
 class Model:
-    """Docstring here."""
+    """Abstract representer of the database model in Python.
+
+    This class provides the base for defining the structure and behavior of data objects that will be stored in a
+    database. The :class:`.model.Model` class can be inherited and used to create custom models with fields, methods,
+    and attributes. It supports relationships between different models, enabling data retrieval and manipulation across
+    tables.
+    """
 
     __table__ = None
     __TYPES = {

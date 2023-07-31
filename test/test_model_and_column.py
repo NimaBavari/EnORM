@@ -54,7 +54,7 @@ class TestModel(unittest.TestCase):
             "SELECT pets.* FROM pets JOIN humans ON pets.owner_id = humans.id WHERE pets.owner_id = %s" % PERSON.id,
         )
 
-    def test_model_nonexisting_compount_attr(self) -> None:
+    def test_model_nonexisting_compound_attr(self) -> None:
         with self.assertRaises(FieldNotExist):
             _ = PERSON.tots
 
