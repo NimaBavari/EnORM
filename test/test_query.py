@@ -1,7 +1,7 @@
 import unittest
 
 from EnORM import CASCADE, Column, ForeignKey, Integer, Model, Serial, String
-from EnORM.exceptions import EntityError
+from EnORM.exceptions import EntityError, MethodChainingError
 from EnORM.functions import count
 from EnORM.query import Query, Subquery  # , QuerySet, Record
 
@@ -73,6 +73,37 @@ class TestQuery(unittest.TestCase):
     def test_query_having(self) -> None:
         q = Query(Human, Human.id, count(Human.age).label("age_count")).having(count(Human.age) > 5)
         self.assertEqual(str(q), "SELECT humans.id, COUNT(humans.age) AS age_count FROM humans HAVING humans.age > 5")
+
+    def test_query_order_by_labelless(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).order_by(Human.age)
+        self.assertEqual(str(q), "SELECT humans.id, humans.full_name FROM humans ORDER BY humans.age")
+
+    def test_query_order_by_labeled(self) -> None:
+        Human.full_name.aggs = []
+        q = Query(Human, Human.id, Human.full_name.label("fname")).order_by("fname")
+        self.assertEqual(str(q), "SELECT humans.id, humans.full_name AS fname FROM humans ORDER BY fname")
+
+    def test_query_limit(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).limit(20)
+        self.assertEqual(str(q), "SELECT humans.id, humans.full_name FROM humans LIMIT 20")
+
+    def test_query_offset(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).offset(10)
+        self.assertEqual(str(q), "SELECT humans.id, humans.full_name FROM humans OFFSET 10")
+
+    def test_query_slice(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).slice(12, 16)
+        self.assertEqual(str(q), "SELECT humans.id, humans.full_name FROM humans LIMIT 4 OFFSET 12")
+
+    def test_query_desc(self) -> None:
+        with self.assertRaises(MethodChainingError):
+            _ = Query(Human, Human.id, Human.full_name).desc()
+        q = Query(Human, Human.id, Human.full_name).order_by(Human.age).desc()
+        self.assertEqual(str(q), "SELECT humans.id, humans.full_name FROM humans ORDER BY humans.age DESC")
+
+    def test_query_distinct(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).distinct()
+        self.assertEqual(str(q), "SELECT DISTINCT humans.id, humans.full_name FROM humans")
 
     def test_query_subquery(self) -> None:
         q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)

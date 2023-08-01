@@ -89,7 +89,15 @@ class QuerySet:
 
 
 class Subquery:
-    """Docstring here."""
+    """Representer of an SQL subquery.
+
+    A subquery is a nested SELECT statement that is used within another SQL statement.
+
+    :params inner_sql:      SQL string of the view represented by the subquery
+    :params column_names:   Original names of the columns in that view.
+
+    Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
+    """
 
     subquery_idx = 0
 
@@ -119,11 +127,11 @@ class Query:
 
     Gets as an argument the
 
-        :param entities: -- which correspond to the "columns" of the matched results.
+    :param entities: -- which correspond to the "columns" of the matched results.
 
     .. warning::
 
-        :param entities: may contain at most one `MappedClass` instance.
+    :param entities: may contain at most one `MappedClass` instance.
 
     NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
     """

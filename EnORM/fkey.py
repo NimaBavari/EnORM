@@ -8,7 +8,16 @@ CASCADE = "cascade"
 
 
 class ForeignKey:
-    """Docstring here."""
+    """Representer of foreign key relations.
+
+    This class implements logic handling relations across tables through connector columns.
+
+    :param foreign_model:   `MappedClass` that represents a foreign model
+    :param reverse_name:    keyword-only. Attr name for any foreign model instance to access all instances of this
+        model who is related to that instance
+    :param on_delete:       keyword-only. Whether to delete cascade style or not. Optional
+    :param on_update:       keyword-only. Whether to update cascade style or not. Optional.
+    """
 
     def __init__(
         self,

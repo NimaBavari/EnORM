@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Type, Union
 
 from .exceptions import IncompatibleArgument, OrphanColumn
 from .fkey import ForeignKey
@@ -15,10 +15,8 @@ class Label:
     Never initiated directly, a `Label` object is created by invoking :meth:`label()` on objects of subclasses of
     :class:`.column.BaseColumn` and on `MappedClass`.
 
-    Receives the following arguments:
-
-        :param denotee: the object that this instance labels
-        :param text:    alias text.
+    :param denotee: the object that this instance labels
+    :param text:    alias text.
     """
 
     def __init__(self, denotee: Union[Type, BaseColumn], text: str) -> None:
@@ -29,7 +27,7 @@ class Label:
 class BaseColumn:
     """Base class for representing a column in a database."""
 
-    aggs = []
+    aggs: List[str] = []
 
     def binary_ops(self, other: Any, operator: str) -> str:
         other_compound = "%s.%s" % (other.view_name, other.variable_name) if isinstance(other, BaseColumn) else other
@@ -75,14 +73,12 @@ class BaseColumn:
 class Column(BaseColumn):
     """Abstraction of a real table column in a database.
 
-    Receives the following arguments:
-
-        :param type_:       type of value that this column expects
-        :param length:      max length of the expected value. Only works with :class:`.types.String`. Optional
-        :param rel:         marker of a relationship -- a foreign key. Optional
-        :param primary_key: keyword-only. Whether or not the column is a primary key. Optional
-        :param default:     keyword-only. Default value for cells of the column to take. Optional
-        :param nullable:    keyword-only. Whether or not the cells of the column are nullable. Optional
+    :param type_:       type of value that this column expects
+    :param length:      max length of the expected value. Only works with :class:`.types.String`. Optional
+    :param rel:         marker of a relationship -- a foreign key. Optional
+    :param primary_key: keyword-only. Whether or not the column is a primary key. Optional
+    :param default:     keyword-only. Default value for cells of the column to take. Optional
+    :param nullable:    keyword-only. Whether or not the cells of the column are nullable. Optional.
 
     NOTE that :param type_: must be any of the custom types defined in :module:`.types`.
     """
@@ -152,10 +148,8 @@ class VirtualColumn(BaseColumn):
     Is never instantiated directly but is derived from actual columns, e.g. by accessing a field of a
     :class:`.query.Subquery` object.
 
-    Receives the following arguments:
-
-        :param variable_name:   Name, as a string, of the column as it is defined in the source
-        :param view_name:       Name of the view in which the column belongs.
+    :param variable_name:   Name, as a string, of the column as it is defined in the source
+    :param view_name:       Name of the view in which the column belongs.
     """
 
     def __init__(self, variable_name: str, view_name: str) -> None:

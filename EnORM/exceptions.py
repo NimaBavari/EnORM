@@ -4,15 +4,15 @@ from typing import Any, Optional, Type
 
 
 class IncompatibleArgument(TypeError):
-    """Docstring here."""
+    """Raised when parameters of incompatible values or incompatible types are used together."""
 
 
 class EntityError(ValueError):
-    """Docstring here."""
+    """Raised when entities (column-like objects) are not used correctly."""
 
 
 class MethodChainingError(ValueError):
-    """Docstring here."""
+    """Raised when a wrong sequence of methods are chained together on :class:`.query.Query`."""
 
 
 class Fixed(Exception):

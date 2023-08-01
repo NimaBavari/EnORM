@@ -14,7 +14,18 @@ from .query import Query
 
 
 class DBSession:
-    """Docstring here."""
+    """A singleton DB session class.
+
+    This class implements a singleton DB session to be used to access the database.
+
+    :param engine:  DB engine that the session uses.
+
+    Implements a context manager for a more secure session. The following is an idiomatic usage::
+
+        eng = DBEngine("postgresql://user:secret@localhost:5432/my_db")
+        with DBSession(eng) as session:
+            pass  # do something with session
+    """
 
     _instance = None
 
