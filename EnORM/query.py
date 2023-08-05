@@ -17,7 +17,15 @@ from .exceptions import EntityError, FieldNotExist, MethodChainingError, Multipl
 
 
 class Record(UserDict):
-    """Docstring here."""
+    """Representer of each of a database fetch results.
+
+    This can be a complete or an incomplete table row.
+
+    :param d:       data that the record is based on
+    :param query:   query that fetched this record, among possibly others.
+
+    This class is never directly instantiated.
+    """
 
     def __init__(self, d: Dict[str, Any], query: Query) -> None:
         super().__init__(d)
@@ -58,7 +66,14 @@ class Record(UserDict):
 
 
 class QuerySet:
-    """Docstring here."""
+    """A class that represents database fetch results.
+
+    :param lst: underlying list of records.
+
+    Immutable, ordered. Indexable, iterable, subscriptable.
+
+    NOTE that this is terminal: no any query methods can be applied to the instance anymore.
+    """
 
     def __init__(self, lst: List[Record]) -> None:
         self.lst = lst
@@ -94,7 +109,7 @@ class Subquery:
     A subquery is a nested SELECT statement that is used within another SQL statement.
 
     :params inner_sql:      SQL string of the view represented by the subquery
-    :params column_names:   Original names of the columns in that view.
+    :params column_names:   original names of the columns in that view.
 
     Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
     """

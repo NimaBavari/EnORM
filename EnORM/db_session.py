@@ -46,8 +46,8 @@ class DBSession:
                 self.engine.cursor.execute(sql)
         except pyodbc.DatabaseError:
             raise
-
-        Model.model_definition_sqls = []
+        finally:
+            Model.model_definition_sqls = []
 
         self.engine.conn.commit()
 

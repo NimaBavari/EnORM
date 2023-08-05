@@ -148,8 +148,8 @@ class VirtualColumn(BaseColumn):
     Is never instantiated directly but is derived from actual columns, e.g. by accessing a field of a
     :class:`.query.Subquery` object.
 
-    :param variable_name:   Name, as a string, of the column as it is defined in the source
-    :param view_name:       Name of the view in which the column belongs.
+    :param variable_name:   name, as a string, of the column as it is defined in the source
+    :param view_name:       name of the view in which the column belongs.
     """
 
     def __init__(self, variable_name: str, view_name: str) -> None:

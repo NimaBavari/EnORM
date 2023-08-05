@@ -8,7 +8,6 @@
   * [ ] Non-aggregate functions
 * [ ] Implement non-aggregate functions
 * [ ] Add docstrings
-  * [ ] class level
   * [ ] function level
   * [ ] method level
 * [ ] Implement migrations

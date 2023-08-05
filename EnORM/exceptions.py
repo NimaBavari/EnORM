@@ -16,7 +16,7 @@ class MethodChainingError(ValueError):
 
 
 class Fixed(Exception):
-    """Docstring here."""
+    """Base class for all messaged exceptions."""
 
     message: Optional[str] = None
 
@@ -25,7 +25,7 @@ class Fixed(Exception):
 
 
 class ValueOutOfBound(Fixed):
-    """Docstring here."""
+    """Raised when a value of an EnORM type is out of bounds."""
 
     def __init__(self, type_name: str) -> None:
         self.message = "`%s` value is out of bounds." % type_name
@@ -33,7 +33,7 @@ class ValueOutOfBound(Fixed):
 
 
 class FieldNotExist(Fixed):
-    """Docstring here."""
+    """Raised when the inquired field does not exist in a multi-field object."""
 
     def __init__(self, field_name: str) -> None:
         self.message = "Field name %s not exists." % field_name
@@ -41,7 +41,7 @@ class FieldNotExist(Fixed):
 
 
 class WrongFieldType(Fixed):
-    """Docstring here."""
+    """Raised when the value of a column is of another type than is declared."""
 
     def __init__(self, field_name: str, exp_type: Type, actual_type: Type) -> None:
         self.message = "Field %s expected %s but got %s." % (
@@ -53,7 +53,7 @@ class WrongFieldType(Fixed):
 
 
 class MissingRequiredField(Fixed):
-    """Docstring here."""
+    """Raised when a new row is instantiated without a required field."""
 
     def __init__(self, field_name: str) -> None:
         self.message = "Cannot call without field %s." % field_name
@@ -61,18 +61,18 @@ class MissingRequiredField(Fixed):
 
 
 class QueryFormatError(Fixed):
-    """Docstring here."""
+    """Raised when a query is formatted incorrectly."""
 
     message = "Wrong query format."
 
 
 class MultipleResultsFound(Fixed):
-    """Docstring here."""
+    """Raised when multiple results are found while a single result is expected."""
 
     message = "Multiple results found."
 
 
 class OrphanColumn(Fixed):
-    """Docstring here."""
+    """Raised when a column is instantiated outside a model definition."""
 
     message = "Cannot initialize `Column` outside a `Model`."
