@@ -1,9 +1,12 @@
 import unittest
 
 from EnORM import CASCADE, Column, ForeignKey, Integer, Model, Serial, String
+from EnORM.db_engine import AbstractEngine
 from EnORM.exceptions import EntityError, MethodChainingError
 from EnORM.functions import count
 from EnORM.query import Query, Subquery  # , QuerySet, Record
+
+from .defs import FakeEngine
 
 
 class Human(Model):
@@ -48,8 +51,8 @@ class TestQuery(unittest.TestCase):
         sq_view_name = sq.view_name
         self.assertEqual(
             str(q),
-            "SELECT pets.name, pets.age FROM pets JOIN (SELECT humans.id, humans.full_name FROM humans) AS %s ON %s.full_name = pets.name"
-            % (sq_view_name, sq_view_name),
+            "SELECT pets.name, pets.age FROM pets JOIN (SELECT humans.id, humans.full_name FROM humans) AS %s ON "
+            "%s.full_name = pets.name" % (sq_view_name, sq_view_name),
         )
 
     def test_query_filter(self) -> None:
@@ -111,3 +114,32 @@ class TestQuery(unittest.TestCase):
         self.assertIsInstance(sq, Subquery)
         self.assertEqual(str(sq), str(q))
         self.assertListEqual(sq.column_names, ["*", "id", "full_name"])
+
+    def test_query_update_direct(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
+        q.update(age=20)
+        self.assertEqual(str(q), "UPDATE humans SET humans.age = 20 WHERE humans.age = 30")
+
+    def test_query_update_indirect(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
+        result = q.first()
+        result.age += 1
+        self.assertEqual(
+            str(q),
+            "UPDATE humans SET humans.age = 31 WHERE humans.age = 30 AND humans.id = 17 AND "
+            "humans.full_name = Jacques Trate AND humans.age = 30",
+        )
+        AbstractEngine.active_instance = None
+
+    def test_query_delete(self) -> None:
+        q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
+        q.delete()
+        self.assertEqual(str(q), "DELETE FROM humans WHERE humans.age = 30")
+
+    def test_query_execs(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
+        self.assertEqual(q.count(), 2)
+        self.assertTrue(q.exists())
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")

@@ -8,7 +8,7 @@ from typing import Any, Iterator, List, Optional, Type, Union
 import pyodbc
 
 from .column import BaseColumn, Label
-from .db_engine import DBEngine
+from .db_engine import AbstractEngine
 from .model import Model
 from .query import Query
 
@@ -35,9 +35,9 @@ class DBSession:
 
         return cls._instance
 
-    def __init__(self, engine: DBEngine) -> None:
+    def __init__(self, engine: AbstractEngine) -> None:
         self.engine = engine
-        DBEngine.active_instance = self.engine
+        AbstractEngine.active_instance = self.engine
         self.queue: List[Model] = []
         self.accumulator: List[Query] = []
 

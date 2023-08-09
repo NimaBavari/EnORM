@@ -1,9 +1,15 @@
-"""Contains :class:`.db_engine.DBEngine`."""
+"""Contains abstract and concrete database engine classes."""
 
 import pyodbc
 
 
-class DBEngine:
+class AbstractEngine:
+    """Abstract database engine class."""
+
+    active_instance = None
+
+
+class DBEngine(AbstractEngine):
     """Connection adapter for the :class:`.db_session.DBSession` object.
 
     This provides a thin wrapper around DB driver API.
@@ -12,8 +18,6 @@ class DBEngine:
 
     The class keeps record of the most recent active instance as an inner state.
     """
-
-    active_instance = None
 
     def __init__(self, conn_str: str) -> None:
         self.conn = pyodbc.connect(conn_str)

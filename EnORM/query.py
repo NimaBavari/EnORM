@@ -6,34 +6,33 @@ any collection of them :class:`.query.QuerySet`.
 
 from __future__ import annotations
 
-from collections import UserDict
 from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
 from .column import BaseColumn, Column, Label, VirtualColumn
-from .db_engine import DBEngine
+from .db_engine import AbstractEngine
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 
 
-class Record(UserDict):
+class Record:
     """Representer of each of a database fetch results.
 
     This can be a complete or an incomplete table row.
 
-    :param d:       data that the record is based on
+    :param dct:     data that the record is based on
     :param query:   query that fetched this record, among possibly others.
 
     This class is never directly instantiated.
     """
 
-    def __init__(self, d: Dict[str, Any], query: Query) -> None:
-        super().__init__(d)
-        self.query = query
+    def __init__(self, dct: Dict[str, Any], query: Query) -> None:
+        super().__setattr__("dct", dct)
+        super().__setattr__("query", query)
 
     def __getattr__(self, attr: str) -> Any:
         try:
-            return self[attr]
+            return self.dct[attr]
         except KeyError as e:
             if self.is_row:
                 try:
@@ -52,10 +51,10 @@ class Record(UserDict):
             raise FieldNotExist(attr) from e
 
     def __setattr__(self, attr: str, value: Any) -> None:
-        if attr not in self:
+        if attr not in self.dct:
             raise FieldNotExist(attr)
 
-        self.query.filter_by(**self).update(**{attr: value})
+        self.query.filter_by(**self.dct).update(**{attr: value})
 
     @property
     def is_row(self) -> bool:
@@ -334,7 +333,7 @@ class Query:
         return query_set[0] if query_set else None
 
     def all(self) -> QuerySet:
-        engine = DBEngine.active_instance
+        engine = AbstractEngine.active_instance
         try:
             engine.cursor.execute(self._sql)
             col_names = [col[0] for col in engine.cursor.description]
@@ -345,8 +344,8 @@ class Query:
         return QuerySet(results)
 
     def first(self) -> Optional[Record]:
-        (result,) = self.limit(1).all()
-        return result
+        query_set = self.limit(1).all()
+        return query_set[0]
 
     def one_or_none(self) -> Optional[Record]:
         query_set = self.all()
@@ -371,6 +370,8 @@ class Query:
         """
         self.data["update"] = self.data.pop("select")
         self.data["set"] = list(fields_values.items())
+        if "limit" in self.data:
+            del self.data["limit"]
 
     def delete(self) -> None:
         """Example usage:
@@ -380,6 +381,8 @@ class Query:
         ```
         """
         self.data["delete"] = self.data.pop("select")
+        if "limit" in self.data:
+            del self.data["limit"]
 
     def parse(self) -> str:
         def parse_item(compound_name: str) -> str:
@@ -410,8 +413,8 @@ class Query:
             table = self.data["from"][0]
             parsed_str = "DELETE FROM %s" % table
         elif "update" in self.data:
-            table = self.data["update"][0].get_table_name()
-            fields_values_seq = ", ".join("%s = %s" % (field, value) for field, value in self.data["set"])
+            table = self.data["from"][0]
+            fields_values_seq = ", ".join("%s.%s = %s" % (table, field, value) for field, value in self.data["set"])
             parsed_str = "UPDATE %s SET %s" % (table, fields_values_seq)
 
         if "from_as" in self.data:
