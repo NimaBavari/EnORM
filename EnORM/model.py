@@ -27,7 +27,7 @@ class Model:
         Serial: "SERIAL",
     }
 
-    __dep_mapping: Dict[type, List[type]] = {}
+    dep_mapping: Dict[type, List[type]] = {}
 
     model_definition_sqls: List[str] = []
 
@@ -45,7 +45,7 @@ class Model:
         for field, val in fields.items():
             Column.objects[id(val)] = {"model": cls, "variable_name": field}
             if val.rel is not None:
-                cls.__dep_mapping[val.rel.foreign_model] = [*cls.__dep_mapping.get(val.rel.foreign_model, []), cls]
+                cls.dep_mapping[val.rel.foreign_model] = [*cls.dep_mapping.get(val.rel.foreign_model, []), cls]
 
     def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
@@ -142,7 +142,7 @@ class Model:
             fields = self_model.get_fields()
             return fields[attr]
         except KeyError as e:
-            for m in self_model.__dep_mapping[self_model]:
+            for m in self_model.dep_mapping[self_model]:
                 connector = m.get_connector_column(self_model)
                 if connector.rel.reverse_name == attr:
                     condition_dict = {

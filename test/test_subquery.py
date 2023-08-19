@@ -1,16 +1,10 @@
 import unittest
 
-from EnORM import Integer, Model, Serial, String
-from EnORM.column import Column, VirtualColumn
+from EnORM.column import VirtualColumn
 from EnORM.exceptions import EntityError
 from EnORM.query import Query, Subquery
 
-
-class Human(Model):
-    id = Column(Serial, primary_key=True)
-    full_name = Column(String, 100, nullable=False)
-    age = Column(Integer)
-
+from .defs import Human
 
 sq = Query(Human, Human.full_name, Human.age).filter(Human.age >= 30).subquery()
 

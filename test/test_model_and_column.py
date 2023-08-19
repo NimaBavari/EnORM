@@ -5,23 +5,12 @@ from EnORM.column import Label
 from EnORM.exceptions import FieldNotExist, OrphanColumn
 from EnORM.query import Subquery
 
-
-class Human(Model):
-    id = Column(Serial, primary_key=True)
-    full_name = Column(String, 100, nullable=False)
-    age = Column(Integer)
-
-
-class Pet(Model):
-    name = Column(String, 40, nullable=False)
-    age = Column(Integer, nullable=False)
-    owner_id = Column(Serial, None, ForeignKey(Human, reverse_name="pets", on_delete=CASCADE))
-
+from .defs import Human, Pet
 
 MODEL_CLS = Pet
-MODEL_INSTANCE = MODEL_CLS(name="Sakura", age=5, owner_id=Serial(21))
-
 FOREIGN_MAPPED = Human
+
+MODEL_INSTANCE = MODEL_CLS(name="Sakura", age=5, owner_id=Serial(21))
 PERSON = FOREIGN_MAPPED(id=Serial(21), full_name="Nima Bavari Goudarzi", age=32)
 
 

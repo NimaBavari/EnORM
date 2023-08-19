@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, List, Tuple
 
+from EnORM import CASCADE, Column, ForeignKey, Integer, Model, Serial, String
 from EnORM.db_engine import AbstractEngine
 
 
@@ -45,3 +46,16 @@ class FakeEngine(AbstractEngine):
     def __init__(self, conn_str: str) -> None:
         self.conn = FakeConnection(conn_str)
         self.cursor = self.conn.cursor()
+
+
+class Human(Model):
+    id = Column(Serial, primary_key=True)
+    full_name = Column(String, 100, nullable=False)
+    age = Column(Integer)
+    gender = Column(String, 1)
+
+
+class Pet(Model):
+    name = Column(String, 40, nullable=False)
+    age = Column(Integer, nullable=False)
+    owner_id = Column(Serial, None, ForeignKey(Human, reverse_name="pets", on_delete=CASCADE))

@@ -1,25 +1,11 @@
 import unittest
 
-from EnORM import CASCADE, Column, ForeignKey, Integer, Model, Serial, String
 from EnORM.db_engine import AbstractEngine
-from EnORM.exceptions import EntityError, MethodChainingError
+from EnORM.exceptions import EntityError, FieldNotExist, MethodChainingError
 from EnORM.functions import count
-from EnORM.query import Query, Subquery  # , QuerySet, Record
+from EnORM.query import Query, QuerySet, Record, Subquery
 
-from .defs import FakeEngine
-
-
-class Human(Model):
-    id = Column(Serial, primary_key=True)
-    full_name = Column(String, 100, nullable=False)
-    age = Column(Integer)
-    gender = Column(String, 1)
-
-
-class Pet(Model):
-    name = Column(String, 40, nullable=False)
-    age = Column(Integer, nullable=False)
-    owner_id = Column(Serial, None, ForeignKey(Human, reverse_name="pets", on_delete=CASCADE))
+from .defs import FakeEngine, Human, Pet
 
 
 class TestQuery(unittest.TestCase):
@@ -142,4 +128,57 @@ class TestQuery(unittest.TestCase):
         q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
         self.assertEqual(q.count(), 2)
         self.assertTrue(q.exists())
+        AbstractEngine.active_instance = None
+
+    def test_query_record_identity(self) -> None:
         AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        q = Query(Human, Human.id, Human.full_name, Human.age).filter(Human.age == 30)
+        res = q.first()
+        self.assertIsInstance(res, Record)
+        self.assertDictEqual(res.dct, {"id": 17, "full_name": "Jacques Trate", "age": 30})
+        self.assertEqual(res.query, q)
+
+    def test_query_record_nonexistent_attr(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        res = Query(Human, Human.id, Human.full_name).filter(Human.age == 30).first()
+        with self.assertRaises(FieldNotExist):
+            _ = res.phone_number
+        AbstractEngine.active_instance = None
+
+    def test_query_record_existent_attr(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        res = Query(Human, Human.id, Human.full_name, Human.age).filter(Human.age == 30).first()
+        self.assertEqual(res.age, 30)
+        AbstractEngine.active_instance = None
+
+    def test_query_record_reverse_name_row(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        res = Query(Human).filter(Human.age == 30).first()
+        self.assertEqual(
+            res.pets.inner_sql,
+            "SELECT pets.* FROM pets JOIN humans ON pets.owner_id = humans.id WHERE pets.owner_id = 17",
+        )
+        AbstractEngine.active_instance = None
+
+    def test_query_record_reverse_name_not_row(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        res = Query(Human, Human.id, Human.full_name).filter(Human.age == 30).first()
+        with self.assertRaises(FieldNotExist):
+            _ = res.pets
+        AbstractEngine.active_instance = None
+
+    def test_query_queryset(self) -> None:
+        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        q = Query(Human, Human.id, Human.full_name, Human.age).filter(Human.age == 30)
+        res = q.all()
+        self.assertIsInstance(res, QuerySet)
+        self.assertEqual(len(res), 2)
+        self.assertIsInstance(res[1], Record)
+        slc = res[1:]
+        self.assertIsInstance(slc, list)
+        self.assertEqual(len(slc), 1)
+        member = slc[0]
+        self.assertIsInstance(member, Record)
+        self.assertDictEqual(member.dct, {"id": 34, "full_name": "Joanna Males", "age": 30})
+        self.assertEqual(member.query, q)
+        AbstractEngine.active_instance = None

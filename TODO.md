@@ -1,8 +1,6 @@
 # EnORM for the next release: Plan
 
 * [ ] Complete testing
-  * [ ] QuerySet
-  * [ ] Aggregate functions
   * [ ] Non-aggregate functions
 * [ ] Implement non-aggregate functions
 * [ ] Add docstrings

@@ -40,7 +40,7 @@ class Record:
                 except AttributeError:
                     self_model = self.query.entities[0]
 
-                for m in self_model.__dep_mapping[self_model]:
+                for m in self_model.dep_mapping[self_model]:
                     connector = m.get_connector_column(self_model)
                     if connector.rel.reverse_name == attr:
                         condition_dict = {
