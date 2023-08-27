@@ -12,8 +12,8 @@ from .types import Serial, String
 class Label:
     """Representer of all kinds of alias.
 
-    Never initiated directly, a `Label` object is created by invoking :meth:`label()` on objects of subclasses of
-    :class:`.column.BaseColumn` and on `MappedClass`.
+    Never initiated directly, a :class:`.column.Label` object is created by invoking :meth:`label()` on objects of
+    subclasses of :class:`.column.BaseColumn` and on `MappedClass`.
 
     :param denotee: the object that this instance labels
     :param text:    alias text.
@@ -25,7 +25,7 @@ class Label:
 
 
 class BaseColumn:
-    """Base class for representing a column in a database."""
+    """Base class for representing a column-like value in a database."""
 
     aggs: List[str] = []
 
@@ -65,12 +65,26 @@ class BaseColumn:
     def label(self, alias: str) -> Label:
         return Label(self, alias)
 
+
+class Scalar(BaseColumn):
+    """Scalar value as a column.
+
+    :param repr_:   SQL representation of the scalar name.
+    """
+
+    def __init__(self, repr_) -> None:
+        self.compound_variable_name = repr_
+
+
+class Field(BaseColumn):
+    """Representer of all real and virtual fields."""
+
     @property
-    def compound_variable_name(self) -> str:
+    def compound_variable_name(self):
         return "%s, %s" % (self.view_name, self.variable_name)
 
 
-class Column(BaseColumn):
+class Column(Field):
     """Abstraction of a real table column in a database.
 
     :param type_:       type of value that this column expects
@@ -142,10 +156,10 @@ class Column(BaseColumn):
         return self.model.get_table_name()
 
 
-class VirtualColumn(BaseColumn):
+class VirtualField(Field):
     """Abstraction of a virtual table column in a database.
 
-    Is never instantiated directly but is derived from actual columns, e.g. by accessing a field of a
+    Never instantiated directly but is derived from actual columns, e.g. by accessing a field of a
     :class:`.query.Subquery` object.
 
     :param variable_name:   name, as a string, of the column as it is defined in the source

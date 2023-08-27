@@ -2,7 +2,6 @@
 
 * [ ] Complete testing
   * [ ] Non-aggregate functions
-* [ ] Implement non-aggregate functions
 * [ ] Add docstrings
   * [ ] function level
   * [ ] method level

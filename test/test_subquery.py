@@ -1,6 +1,6 @@
 import unittest
 
-from EnORM.column import VirtualColumn
+from EnORM.column import VirtualField
 from EnORM.exceptions import EntityError
 from EnORM.query import Query, Subquery
 
@@ -15,7 +15,7 @@ class TestSubquery(unittest.TestCase):
 
     def test_subquery_existing_fields(self) -> None:
         virtual_fld = sq.full_name
-        self.assertIsInstance(virtual_fld, VirtualColumn)
+        self.assertIsInstance(virtual_fld, VirtualField)
         self.assertEqual(virtual_fld.variable_name, "full_name")
         self.assertEqual(virtual_fld.view_name, sq.view_name)
 

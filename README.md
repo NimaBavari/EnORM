@@ -1,11 +1,14 @@
 # EnORM
 
-EnORM - EnDATA Object Relational Mapper.
-Get ready for an EnORMous database experience!
+EnORM - EnDATA Object Relational Mapper. Get ready for an EnORMous database experience!
+
+- [EnORM](#enorm)
+  - [Example Usage](#example-usage)
+  - [API Documentation](#api-documentation)
 
 ## Example Usage
 
-```python
+``` python
 from EnORM import CASCADE, Column, DBEngine, DBSession, Float, ForeignKey, Integer, Model, Serial, String
 
 
@@ -36,3 +39,5 @@ with DBSession(eng) as session:
     
     sharks = session.query(Employee, Employee.full_name, Employee.company_id).filter(Employee.salary > 90000.00).all()
 ```
+
+## API Documentation

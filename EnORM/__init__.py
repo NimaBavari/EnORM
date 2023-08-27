@@ -3,13 +3,15 @@ from .db_engine import DBEngine
 from .db_session import DBSession
 from .fkey import CASCADE, ForeignKey
 from .model import Model
-from .types import Float, Integer, Serial, String
+from .types import Date, DateTime, Float, Integer, Serial, String, Time
 
 __version__ = "1.0.1"
 
 __all__ = [
     "CASCADE",
     "Column",
+    "Date",
+    "DateTime",
     "DBEngine",
     "DBSession",
     "ForeignKey",
@@ -18,5 +20,6 @@ __all__ = [
     "Integer",
     "Serial",
     "String",
+    "Time",
     "__version__",
 ]

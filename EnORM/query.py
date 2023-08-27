@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 import pyodbc
 
-from .column import BaseColumn, Column, Label, VirtualColumn
+from .column import BaseColumn, Column, Label, VirtualField
 from .db_engine import AbstractEngine
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 
@@ -129,7 +129,7 @@ class Subquery:
         if attr not in self.column_names:
             raise EntityError("Wrong field for subquery.")
 
-        return VirtualColumn(attr, self.view_name)
+        return VirtualField(attr, self.view_name)
 
 
 class Query:
@@ -387,6 +387,8 @@ class Query:
     def parse(self) -> str:
         def parse_item(compound_name: str) -> str:
             parts = compound_name.split(", ")
+            if len(parts) == 1:
+                return compound_name
             if len(parts) == 2:
                 return "%s.%s" % (*parts,)
             if len(parts) == 3:

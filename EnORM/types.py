@@ -1,10 +1,15 @@
 """Contains definitions for custom types."""
 
+from datetime import date, datetime, time
+
 from .exceptions import ValueOutOfBound
 
 Integer = int
+Date = date
+DateTime = datetime
 Float = float
 String = str
+Time = time
 
 
 class Serial(Integer):
