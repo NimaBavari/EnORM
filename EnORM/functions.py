@@ -1,6 +1,6 @@
 """Contains ORM functions, both aggregate and non-aggregate ones."""
 
-from typing import Optional
+from typing import Optional, Union
 
 from .column import BaseColumn, Scalar
 
@@ -30,8 +30,11 @@ def max_(field: BaseColumn) -> BaseColumn:
     return agg(field, "MAX")
 
 
-def char_length(s: str) -> int:
-    return len(s)
+def char_length(c: Union[BaseColumn, str]) -> Scalar:
+    full_field_name = c
+    if isinstance(c, BaseColumn):
+        full_field_name = ".".join(c.compound_variable_name.split(", "))
+    return Scalar("CHAR_LENGTH(%s)" % full_field_name)
 
 
 def concat(*parts: str) -> str:
