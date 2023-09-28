@@ -138,6 +138,7 @@ class Column(Field):
 
     @property
     def model(self) -> Type:
+        """Relational model that the column belongs to."""
         try:
             m = self.objects[id(self)]["model"]
         except KeyError:
@@ -146,6 +147,7 @@ class Column(Field):
 
     @property
     def variable_name(self) -> str:
+        """Name with which the column is defined."""
         try:
             v = self.objects[id(self)]["variable_name"]
         except KeyError:
@@ -154,6 +156,7 @@ class Column(Field):
 
     @property
     def view_name(self) -> str:
+        """Name of the SQL table that the column belongs to."""
         return self.model.get_table_name()
 
 

@@ -4,16 +4,15 @@ EnORM - EnDATA Object Relational Mapper. Get ready for an EnORMous database expe
 
 - [EnORM](#enorm)
   - [Example Usage](#example-usage)
-  - [API Documentation](#api-documentation)
-    - [`const .fkey.CASCADE`](#const-fkeycascade)
-    - [`class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)`](#class-columncolumntype_-lengthnone-relnone--primary_keyfalse-defaultnone-nullabletrue)
-      - [Parameters](#parameters)
-      - [Attributes](#attributes)
-    - [`class .types.Date`](#class-typesdate)
-    - [`class .types.DateTime`](#class-typesdatetime)
-    - [`class .db_engine.DBEngine`](#class-db_enginedbengine)
-      - [Parameters](#parameters-1)
-      - [Attributes](#attributes-1)
+  - [Documentation](#documentation)
+    - [API Reference](#api-reference)
+      - [`const .fkey.CASCADE` \[source\]](#const-fkeycascade-source)
+      - [`class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` \[source\]](#class-columncolumntype_-lengthnone-relnone--primary_keyfalse-defaultnone-nullabletrue-source)
+      - [`class .types.Date` \[source\]](#class-typesdate-source)
+      - [`class .types.DateTime` \[source\]](#class-typesdatetime-source)
+      - [`class .db_engine.DBEngine(conn_str)` \[source\]](#class-db_enginedbengineconn_str-source)
+      - [`class .db_session.DBSession(engine)` \[source\]](#class-db_sessiondbsessionengine-source)
+      - [`class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` \[source\]](#class-fkeyforeignkeyforeign_model--reverse_name-on_delete-on_update-source)
 
 ## Example Usage
 
@@ -49,21 +48,21 @@ with DBSession(eng) as session:
     sharks = session.query(Employee, Employee.full_name, Employee.company_id).filter(Employee.salary > 90000.00).all()
 ```
 
-## API Documentation
+## Documentation
 
-### `const .fkey.CASCADE`
+### API Reference
 
-[[source]](EnORM/fkey.py#L7)
+Reference for the EnORM public API.
+
+#### `const .fkey.CASCADE` [[source]](EnORM/fkey.py#L7)
 
 String literal "cascade".
 
-### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)`
-
-[[source]](EnORM/column.py#L88-L158)
+#### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` [[source]](EnORM/column.py#L88-L158)
 
 Abstraction of a real table column in a database.
 
-#### Parameters
+*Parameters*
 
 > **type_** : `typing.Type`
 > 
@@ -71,7 +70,7 @@ Abstraction of a real table column in a database.
 >
 > **length** : `int | None` (default `None`)
 >
-> Max length of the value. Provided only when the type of the column is `String`.
+> Max length of the value. Provided only when the type of the column is `.types.String`.
 >
 > **rel** : `.fkey.ForeignKey | None` (default `None`)
 >
@@ -89,7 +88,7 @@ Abstraction of a real table column in a database.
 >
 > Whether or not the cells of the column are nullable. Keyword-only.
 
-#### Attributes
+*Attributes*
 
 > **model** : `typing.Type`
 >
@@ -97,37 +96,31 @@ Abstraction of a real table column in a database.
 >
 > **variable_name** : `str`
 >
-> The name with which the column is defined.
+> Name with which the column is defined.
 >
 > **view_name** : `str`
 >
-> The name of the SQL table that the column belongs to.
+> Name of the SQL table that the column belongs to.
 
-### `class .types.Date`
-
-[[source]](EnORM/types.py#L8)
+#### `class .types.Date` [[source]](EnORM/types.py#L8)
 
 ORM representation of `datetime.date` objects.
 
-### `class .types.DateTime`
-
-[[source]](EnORM/types.py#L9)
+#### `class .types.DateTime` [[source]](EnORM/types.py#L9)
 
 ORM representation of `datetime.datetime` objects.
 
-### `class .db_engine.DBEngine`
-
-[[source]](EnORM/db_engine.py#L12-L24)
+#### `class .db_engine.DBEngine(conn_str)` [[source]](EnORM/db_engine.py#L12-L24)
 
 Connection adapter for the `.db_session.DBSession` object.
 
-#### Parameters
+*Parameters*
 
 > **conn_str** : `str`
 >
 > Database resource location, along with auth params.
 
-#### Attributes
+*Attributes*
 
 > **conn** : `pyodbc.Connection`
 >
@@ -136,3 +129,67 @@ Connection adapter for the `.db_session.DBSession` object.
 > **cursor** : `pyodbc.Cursor`
 >
 > DB API cursor object.
+
+#### `class .db_session.DBSession(engine)` [[source]](EnORM/db_session.py#L16-L99)
+
+Singleton DB session to access the database across all uses.
+
+*Parameters*
+
+> **engine** : `.db_engine.AbstractEngine`
+>
+> DB engine that the session uses.
+
+*Attributes*
+
+> **engine** : `.db_engine.AbstractEngine`
+>
+> DB engine that the session uses.
+>
+> **queue** : `list`
+>
+> List of newly created instances of DB objects not yet persisted.
+>
+> **accumulator** : `list`
+>
+> List of ORM queries not yet executed.
+
+*Methods*
+
+> **query(\*fields)** -> `.query.Query`
+>
+> Starts a query and returns the query object.
+>
+> **add(obj)** -> `None`
+>
+> Adds a new record to the DB session.
+>
+> **save()** -> `None`
+>
+> Persists all started queries.
+>
+> **commit_adds()** -> `None`
+>
+> Persists all added records on the DB session.
+
+#### `class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` [[source]](EnORM/fkey.py#L10-L37)
+
+Representer of foreign key relations.
+
+*Parameters*
+
+> **foreign_model** : `typing.Type`
+>
+> `MappedClass` that represents a foreign model.
+>
+> **reverse_name** : `str`
+>
+> Relation name on the related class tied to this class. Keyword-only.
+>
+> **on_delete** : `str | None` (default `None`)
+>
+> Whether to delete cascade style or not. Keyword-only.
+>
+> **on_update** : `str | None` (default `None`)
+>
+> Whether to update cascade style or not. Keyword-only.

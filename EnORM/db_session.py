@@ -75,14 +75,17 @@ class DBSession:
         yield from self.queue
 
     def query(self, *fields: Union[Type, BaseColumn, Label]) -> Query:
+        """Starts a query and returns the query object."""
         q = Query(*fields)
         self.accumulator.append(q)
         return q
 
     def add(self, obj: Model) -> None:
+        """Adds a new record to the DB session."""
         self.queue.append(obj)
 
     def save(self) -> None:
+        """Persists all started queries."""
         for q in self.accumulator:
             self.engine.cursor.execute(q._sql)
 
@@ -91,6 +94,7 @@ class DBSession:
         self.accumulator = []
 
     def commit_adds(self) -> None:
+        """Persists all added records on the DB session."""
         for itm in self:
             self.engine.cursor.execute(itm.sql, *itm.attrs.values())
 
