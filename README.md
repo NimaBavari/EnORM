@@ -5,6 +5,15 @@ EnORM - EnDATA Object Relational Mapper. Get ready for an EnORMous database expe
 - [EnORM](#enorm)
   - [Example Usage](#example-usage)
   - [API Documentation](#api-documentation)
+    - [`const .fkey.CASCADE`](#const-fkeycascade)
+    - [`class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)`](#class-columncolumntype_-lengthnone-relnone--primary_keyfalse-defaultnone-nullabletrue)
+      - [Parameters](#parameters)
+      - [Attributes](#attributes)
+    - [`class .types.Date`](#class-typesdate)
+    - [`class .types.DateTime`](#class-typesdatetime)
+    - [`class .db_engine.DBEngine`](#class-db_enginedbengine)
+      - [Parameters](#parameters-1)
+      - [Attributes](#attributes-1)
 
 ## Example Usage
 
@@ -41,3 +50,89 @@ with DBSession(eng) as session:
 ```
 
 ## API Documentation
+
+### `const .fkey.CASCADE`
+
+[[source]](EnORM/fkey.py#L7)
+
+String literal "cascade".
+
+### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)`
+
+[[source]](EnORM/column.py#L88-L158)
+
+Abstraction of a real table column in a database.
+
+#### Parameters
+
+> **type_** : `typing.Type`
+> 
+> The type of the column as represented in SQL.
+>
+> **length** : `int | None` (default `None`)
+>
+> Max length of the value. Provided only when the type of the column is `String`.
+>
+> **rel** : `.fkey.ForeignKey | None` (default `None`)
+>
+> Marker of a relationship. Provided only when a foreign relation exists.
+>
+> **primary_key** : `bool` (default `False`)
+>
+> Whether or not the column is a primary key. Keyword-only.
+>
+> **default** : `typing.Any` (default `None`)
+>
+> Default value for cells of the column to take. Keyword-only.
+>
+> **nullable** : `bool` (default `True`)
+>
+> Whether or not the cells of the column are nullable. Keyword-only.
+
+#### Attributes
+
+> **model** : `typing.Type`
+>
+> Relational model that the column belongs to.
+>
+> **variable_name** : `str`
+>
+> The name with which the column is defined.
+>
+> **view_name** : `str`
+>
+> The name of the SQL table that the column belongs to.
+
+### `class .types.Date`
+
+[[source]](EnORM/types.py#L8)
+
+ORM representation of `datetime.date` objects.
+
+### `class .types.DateTime`
+
+[[source]](EnORM/types.py#L9)
+
+ORM representation of `datetime.datetime` objects.
+
+### `class .db_engine.DBEngine`
+
+[[source]](EnORM/db_engine.py#L12-L24)
+
+Connection adapter for the `.db_session.DBSession` object.
+
+#### Parameters
+
+> **conn_str** : `str`
+>
+> Database resource location, along with auth params.
+
+#### Attributes
+
+> **conn** : `pyodbc.Connection`
+>
+> DB API connection object.
+>
+> **cursor** : `pyodbc.Cursor`
+>
+> DB API cursor object.
