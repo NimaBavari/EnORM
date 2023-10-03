@@ -35,13 +35,13 @@ class BaseColumn:
         E.g.::
 
             Order.price <= 200.00
-        
+
         or
-        
+
             u = User(fullname="Abigail Smith", age=30)
 
             User.age > u.age
-        
+
         Has the following:
 
         :param other:       a literal or a :class:`column.BaseColumn` object, to compare with this object

@@ -218,7 +218,7 @@ class Query:
         E.g.::
 
             session.query(User, email_address, last_visited).join(Organisation).all()
-        
+
             SELECT users.email_address, users.last_visited FROM users
             JOIN organisations ON users.org_id = organisations.id;
 
@@ -446,6 +446,7 @@ class Query:
 
     def parse(self) -> str:
         """Parses the query to get the query string."""
+
         def parse_item(compound_name: str) -> str:
             parts = compound_name.split(", ")
             if len(parts) == 1:
