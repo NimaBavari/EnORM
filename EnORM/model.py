@@ -134,6 +134,7 @@ class Model:
 
     @classmethod
     def label(cls, alias: str) -> Label:
+        """Returns the ORM representation for SQL table aliasing."""
         return Label(cls, alias)
 
     def __getattr__(self, attr: str) -> Any:
@@ -154,6 +155,7 @@ class Model:
 
     @property
     def sql(self) -> str:
+        """SQL statement for new object creation."""
         return """INSERT INTO %s (%s) VALUES (%s);""" % (
             self.get_table_name(),
             ", ".join(self.attrs.keys()),

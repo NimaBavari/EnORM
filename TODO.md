@@ -3,4 +3,3 @@
 * [ ] Add docstrings
   * [ ] method level
 * [ ] Implement migrations
-* [ ] Add documentation

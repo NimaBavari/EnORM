@@ -13,6 +13,12 @@ EnORM - EnDATA Object Relational Mapper. Get ready for an EnORMous database expe
       - [`class .db_engine.DBEngine(conn_str)` \[source\]](#class-db_enginedbengineconn_str-source)
       - [`class .db_session.DBSession(engine)` \[source\]](#class-db_sessiondbsessionengine-source)
       - [`class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` \[source\]](#class-fkeyforeignkeyforeign_model--reverse_name-on_delete-on_update-source)
+      - [`class .model.Model(**attrs)` \[source\]](#class-modelmodelattrs-source)
+      - [`class .types.Float` \[source\]](#class-typesfloat-source)
+      - [`class .types.Integer` \[source\]](#class-typesinteger-source)
+      - [`class .types.Serial` \[source\]](#class-typesserial-source)
+      - [`class .types.String` \[source\]](#class-typesstring-source)
+      - [`class .types.Time` \[source\]](#class-typestime-source)
 
 ## Example Usage
 
@@ -58,7 +64,7 @@ Reference for the EnORM public API.
 
 String literal "cascade".
 
-#### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` [[source]](EnORM/column.py#L88-L158)
+#### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` [[source]](EnORM/column.py#L88-L160)
 
 Abstraction of a real table column in a database.
 
@@ -130,7 +136,7 @@ Connection adapter for the `.db_session.DBSession` object.
 >
 > DB API cursor object.
 
-#### `class .db_session.DBSession(engine)` [[source]](EnORM/db_session.py#L16-L99)
+#### `class .db_session.DBSession(engine)` [[source]](EnORM/db_session.py#L16-L103)
 
 Singleton DB session to access the database across all uses.
 
@@ -172,7 +178,7 @@ Singleton DB session to access the database across all uses.
 >
 > Persists all added records on the DB session.
 
-#### `class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` [[source]](EnORM/fkey.py#L10-L37)
+#### `class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` [[source]](EnORM/fkey.py#L10-L36)
 
 Representer of foreign key relations.
 
@@ -193,3 +199,57 @@ Representer of foreign key relations.
 > **on_update** : `str | None` (default `None`)
 >
 > Whether to update cascade style or not. Keyword-only.
+
+#### `class .model.Model(**attrs)` [[source]](EnORM/model.py#L13-L161)
+
+Abstract representer of an ORM database model in Python.
+
+*Parameters*
+
+> **attrs** : `typing.Any`
+>
+> Initialization attributes.
+
+*Attributes*
+
+> **sql** : `str`
+>
+> SQL statement for new object creation.
+
+*Methods*
+
+> **label(alias)** -> `.column.Label`
+>
+> Returns the ORM representation for SQL table aliasing.
+
+#### `class .types.Float` [[source]](EnORM/types.py#L10)
+
+ORM representation of `float` objects.
+
+#### `class .types.Integer` [[source]](EnORM/types.py#L7)
+
+ORM representation of `int` objects.
+
+#### `class .types.Serial` [[source]](EnORM/types.py#L15-L26)
+
+ORM representation of serial types in SQL variants.
+
+*Parameters*
+
+> **val** : `int`
+>
+> Underlying integer value.
+
+*Attributes*
+
+> **val** : `int`
+>
+> Underlying integer value.
+
+#### `class .types.String` [[source]](EnORM/types.py#L11)
+
+ORM representation of `str` objects.
+
+#### `class .types.Time` [[source]](EnORM/types.py#L12)
+
+ORM representation of `datetime.time` objects.

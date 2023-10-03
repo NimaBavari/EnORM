@@ -13,7 +13,7 @@ Time = time
 
 
 class Serial(Integer):
-    """Representer of serial type in SQL variants.
+    """ORM representation of serial types in SQL variants.
 
     :params val:    underlying integer value.
 
