@@ -30,6 +30,23 @@ class BaseColumn:
     aggs: List[str] = []
 
     def binary_ops(self, other: Any, operator: str) -> str:
+        """String representation for direct Python binary operations between :class:`column.BaseColumn` objects.
+
+        E.g.::
+
+            Order.price <= 200.00
+        
+        or
+        
+            u = User(fullname="Abigail Smith", age=30)
+
+            User.age > u.age
+        
+        Has the following:
+
+        :param other:       a literal or a :class:`column.BaseColumn` object, to compare with this object
+        :param operator:    SQL operator, represented as a string.
+        """
         other_compound = "%s.%s" % (other.view_name, other.variable_name) if isinstance(other, BaseColumn) else other
         full_field_name = ".".join(self.compound_variable_name.split(", "))
         return "%s %s %s" % (full_field_name, operator, other_compound)
@@ -64,6 +81,10 @@ class BaseColumn:
         return self.binary_ops(flat_list_str, "NOT IN")
 
     def label(self, alias: str) -> Label:
+        """Returns the ORM representation for SQL column aliasing.
+
+        :param alias:   alias as a string.
+        """
         return Label(self, alias)
 
 

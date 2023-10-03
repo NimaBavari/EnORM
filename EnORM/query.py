@@ -58,6 +58,7 @@ class Record:
 
     @property
     def is_row(self) -> bool:
+        """Whether or not this record is a row."""
         return len(self.query.entities) == 1 and (
             isinstance(self.query.entities[0], type)
             or (isinstance(self.query.entities[0], Label) and isinstance(self.query.entities[0].denotee, type))
@@ -203,6 +204,48 @@ class Query:
         return self.parse()
 
     def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
+        """Joins the mapped to the the current instance.
+
+        :param mapped:  joined entity
+        :param exprs:   list of expressions on which to join.
+
+        :return:        resulting :class:`.query.Query` object.
+
+        If :param:`mapped` is either another model or a subquery instance. In the first case, one can join with or
+        without expressions. And if the other model is joined without expressions, an expression is constructed via its
+        primary key. Note that this is only possible when the other model is a parent model to this one.
+
+        E.g.::
+
+            session.query(User, email_address, last_visited).join(Organisation).all()
+        
+            SELECT users.email_address, users.last_visited FROM users
+            JOIN organisations ON users.org_id = organisations.id;
+
+        If the other model is joined with expressions, those expressions are used.
+
+        E.g.::
+
+            session.query(Sale, category_name, quantity)
+                .join(Category, Category.id == Sales.category_id, Sale.quantity > 100, Category.is_current == 1)
+                .all()
+
+            SELECT sales.category_name, sales.quantity FROM sales
+            JOIN categories
+                ON categories.id = sales.category_id AND sales.quantity > 100 AND categories.is_current = 1;
+
+        In case :param:`mapped` is a subquery object, one can only join with expressions.
+
+        E.g.::
+
+            sq = session.query(Human, Human.id, Human.full_name).subquery()
+            session.query(Pet, Pet.name, Pet.age).join(sq, sq.full_name == Pet.name)
+
+            SELECT pets.name, pets.age FROM pets
+            JOIN
+                (SELECT humans.id, humans.full_name FROM humans) AS anon_27
+                ON anon_27.full_name = pets.name;
+        """
         self_model = self.mapped_class or self.entities[0].model
         if isinstance(mapped, type):
             connector_column = self_model.get_connector_column(mapped)
@@ -274,6 +317,7 @@ class Query:
         return self.filter(*criteria)
 
     def group_by(self, *columns: Union[BaseColumn, str]) -> Query:
+        """Adds SQL `GROUP BY` constraint on the current query with the given columns."""
         column_names = [
             column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
         ]
@@ -283,10 +327,12 @@ class Query:
         return self
 
     def having(self, expr: Any) -> Query:
+        """Adds SQL `HAVING` constraint on the current query with the given direct Python expression."""
         self._add_to_data("having", expr)
         return self
 
     def order_by(self, *columns: Union[BaseColumn, str]) -> Query:
+        """Adds SQL `ORDER BY` constraint on the current query with the given columns."""
         column_names = [
             column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
         ]
@@ -296,17 +342,21 @@ class Query:
         return self
 
     def limit(self, value: int) -> Query:
+        """Adds SQL `LIMIT` constraint on the current query with the given limit value."""
         self._add_to_data("limit", "%d" % value)
         return self
 
     def offset(self, value: int) -> Query:
+        """Adds SQL `OFFSET` constraint on the current query with the given offset value."""
         self._add_to_data("offset", "%d" % value)
         return self
 
     def slice(self, start: int, stop: int) -> Query:
+        """Adds slice dampers on the current query, i.e. `start` and `stop`."""
         return self.limit(stop - start).offset(start)
 
     def desc(self) -> Query:
+        """Adds SQL `DESC` constraint to the current query. Raises an exception if the query is not ordered."""
         if "order_by" not in self.data or not self.data["order_by"]:
             raise MethodChainingError("Cannot use `desc` without `order_by`.")
 
@@ -315,14 +365,19 @@ class Query:
         return self
 
     def distinct(self) -> Query:
+        """Adds SQL `DISTINCT` constraint to the current query."""
         self.data["distinct"] = []
         return self
 
     def subquery(self) -> Subquery:
+        """Gets a subquery whose inner SQL is that of the current query with the selected column names."""
         column_names = [s.split(", ")[1] for s in self.data["select"]]
         return Subquery(self._sql, column_names)
 
     def get(self, **kwargs: Any) -> Optional[Record]:
+        """Gets the result by given criteria, e.g. by primary key. Raises an exception if more than one result is
+        found.
+        """
         if "where" in self.data and self.data["where"]:
             raise MethodChainingError("Cannot use `get` after `filter` or `filter_by`.")
 
@@ -333,6 +388,7 @@ class Query:
         return query_set[0] if query_set else None
 
     def all(self) -> QuerySet:
+        """Gets all results."""
         engine = AbstractEngine.active_instance
         try:
             engine.cursor.execute(self._sql)
@@ -344,10 +400,12 @@ class Query:
         return QuerySet(results)
 
     def first(self) -> Optional[Record]:
+        """Gets the first result."""
         query_set = self.limit(1).all()
         return query_set[0]
 
     def one_or_none(self) -> Optional[Record]:
+        """Gets the result or nothing if does not exist. Raises an exception if more than one result is found."""
         query_set = self.all()
         if len(query_set) > 1:
             raise MultipleResultsFound
@@ -355,9 +413,11 @@ class Query:
         return query_set[0] if query_set else None
 
     def exists(self) -> bool:
+        """Whether or not there are any results."""
         return bool(self.first())
 
     def count(self) -> int:
+        """Gets the number of rows in the current queryset."""
         results = self.all()
 
         return len(results)
@@ -385,6 +445,7 @@ class Query:
             del self.data["limit"]
 
     def parse(self) -> str:
+        """Parses the query to get the query string."""
         def parse_item(compound_name: str) -> str:
             parts = compound_name.split(", ")
             if len(parts) == 1:

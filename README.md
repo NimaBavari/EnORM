@@ -1,6 +1,6 @@
 # EnORM
 
-EnORM - EnDATA Object Relational Mapper. Get ready for an EnORMous database experience!
+EnORM—EnDATA Object Relational Mapper.
 
 - [EnORM](#enorm)
   - [Example Usage](#example-usage)
@@ -19,6 +19,25 @@ EnORM - EnDATA Object Relational Mapper. Get ready for an EnORMous database expe
       - [`class .types.Serial` \[source\]](#class-typesserial-source)
       - [`class .types.String` \[source\]](#class-typesstring-source)
       - [`class .types.Time` \[source\]](#class-typestime-source)
+      - [`func agg(field, name_in_sql)` -\> `.column.BaseColumn` \[source\]](#func-aggfield-name_in_sql---columnbasecolumn-source)
+      - [`func count(field)` -\> `.column.BaseColumn` \[source\]](#func-countfield---columnbasecolumn-source)
+      - [`func sum_(field)` -\> `.column.BaseColumn` \[source\]](#func-sum_field---columnbasecolumn-source)
+      - [`func avg(field)` -\> `.column.BaseColumn` \[source\]](#func-avgfield---columnbasecolumn-source)
+      - [`func min_(field)` -\> `.column.BaseColumn` \[source\]](#func-min_field---columnbasecolumn-source)
+      - [`func max_(field)` -\> `.column.BaseColumn` \[source\]](#func-max_field---columnbasecolumn-source)
+      - [`func char_length(c)` -\> `.column.Scalar` \[source\]](#func-char_lengthc---columnscalar-source)
+      - [`func concat(*parts)` -\> `str` \[source\]](#func-concatparts---str-source)
+      - [`func current_date()` -\> `.column.Scalar` \[source\]](#func-current_date---columnscalar-source)
+      - [`func current_time(precision=None)` -\> `.column.Scalar` \[source\]](#func-current_timeprecisionnone---columnscalar-source)
+      - [`func current_timestamp(precision=None)` -\> `.column.Scalar` \[source\]](#func-current_timestampprecisionnone---columnscalar-source)
+      - [`func current_user()` -\> `.column.Scalar` \[source\]](#func-current_user---columnscalar-source)
+      - [`func local_time(precision=None)` -\> `.column.Scalar` \[source\]](#func-local_timeprecisionnone---columnscalar-source)
+      - [`func local_timestamp()` -\> `.column.Scalar` \[source\]](#func-local_timestamp---columnscalar-source)
+      - [`func now()` -\> `.column.Scalar` \[source\]](#func-now---columnscalar-source)
+      - [`func random()` -\> `.column.Scalar` \[source\]](#func-random---columnscalar-source)
+      - [`func session_user()` -\> `.column.Scalar` \[source\]](#func-session_user---columnscalar-source)
+      - [`func user()` -\> `.column.Scalar` \[source\]](#func-user---columnscalar-source)
+    - [Tutorial](#tutorial)
 
 ## Example Usage
 
@@ -253,3 +272,117 @@ ORM representation of `str` objects.
 #### `class .types.Time` [[source]](EnORM/types.py#L12)
 
 ORM representation of `datetime.time` objects.
+
+#### `func agg(field, name_in_sql)` -> `.column.BaseColumn` [[source]](EnORM/functions.py#L8-L11)
+
+Describes the basis for all aggregate functions.
+
+*Parameters*
+
+> **field** : `.column.BaseColumn`
+>
+> Argument.
+>
+> **name_in_sql** : `str`
+>
+> Name of the function in SQL.
+
+#### `func count(field)` -> `.column.BaseColumn` [[source]](EnORM/functions.py#L14-L16)
+
+Describes the SQL aggregate function `COUNT`.
+
+#### `func sum_(field)` -> `.column.BaseColumn` [[source]](EnORM/functions.py#L19-L21)
+
+Describes the SQL aggregate function `SUM`.
+
+#### `func avg(field)` -> `.column.BaseColumn` [[source]](EnORM/functions.py#L24-L26)
+
+Describes the SQL aggregate function `AVG`.
+
+#### `func min_(field)` -> `.column.BaseColumn` [[source]](EnORM/functions.py#L29-L31)
+
+Describes the SQL aggregate function `MIN`.
+
+#### `func max_(field)` -> `.column.BaseColumn` [[source]](EnORM/functions.py#L34-L36)
+
+Describes the SQL aggregate function `MAX`.
+
+#### `func char_length(c)` -> `.column.Scalar` [[source]](EnORM/functions.py#L39-L44)
+
+Describes the SQL function `CHAR_LENGTH`.
+
+*Parameters*
+
+> **c** : `.column.BaseColumn | str`
+>
+> Generic column or its string value.
+
+#### `func concat(*parts)` -> `str` [[source]](EnORM/functions.py#L47-L49)
+
+Concatenates multiple strings into one.
+
+*Parameters*
+
+> **parts** : list of `str`
+>
+> Separate parts.
+
+#### `func current_date()` -> `.column.Scalar` [[source]](EnORM/functions.py#L52-L54)
+
+Describes the SQL function `CURRENT_DATE`.
+
+#### `func current_time(precision=None)` -> `.column.Scalar` [[source]](EnORM/functions.py#L57-L62)
+
+Describes the SQL function `CURRENT_TIME`.
+
+*Parameters*
+
+> **precision** : `int | None` (default `None`)
+>
+> Number of significant decimal digits.
+
+#### `func current_timestamp(precision=None)` -> `.column.Scalar` [[source]](EnORM/functions.py#L65-L70)
+
+Describes the SQL function `CURRENT_TIMESTAMP`.
+
+*Parameters*
+
+> **precision** : `int | None` (default `None`)
+>
+> Number of significant decimal digits.
+
+#### `func current_user()` -> `.column.Scalar` [[source]](EnORM/functions.py#L73-L75)
+
+Describes the SQL function `CURRENT_USER`.
+
+#### `func local_time(precision=None)` -> `.column.Scalar` [[source]](EnORM/functions.py#L78-L83)
+
+Describes the SQL function `LOCALTIME`.
+
+*Parameters*
+
+> **precision** : `int | None` (default `None`)
+>
+> Number of significant decimal digits.
+
+#### `func local_timestamp()` -> `.column.Scalar` [[source]](EnORM/functions.py#L86-L88)
+
+Describes the SQL function `LOCALTIMESTAMP`.
+
+#### `func now()` -> `.column.Scalar` [[source]](EnORM/functions.py#L91-L93)
+
+Describes the SQL function `NOW`.
+
+#### `func random()` -> `.column.Scalar` [[source]](EnORM/functions.py#L96-L98)
+
+Describes the SQL function `RANDOM`.
+
+#### `func session_user()` -> `.column.Scalar` [[source]](EnORM/functions.py#L101-L103)
+
+Describes the SQL function `SESSION_USER`.
+
+#### `func user()` -> `.column.Scalar` [[source]](EnORM/functions.py#L106-L108)
+
+Describes the SQL function `USER`.
+
+### Tutorial
