@@ -6,6 +6,7 @@ from EnORM.query import Query, Subquery
 
 from .defs import Human
 
+Human.alias = None
 sq = Query(Human, Human.full_name, Human.age).filter(Human.age >= 30).subquery()
 
 

@@ -1,7 +1,6 @@
 import unittest
 
 from EnORM import CASCADE, Column, Float, ForeignKey, Integer, Model, Serial, String
-from EnORM.column import Label
 from EnORM.exceptions import FieldNotExist, OrphanColumn
 from EnORM.query import Subquery
 
@@ -33,10 +32,12 @@ class TestModel(unittest.TestCase):
         self.assertIsNone(MODEL_CLS.get_primary_key_column())
 
     def test_model_connector_key(self) -> None:
+        FOREIGN_MAPPED.alias = None
         self.assertEqual(MODEL_CLS.get_connector_column(FOREIGN_MAPPED), MODEL_CLS.owner_id)
         self.assertIsNone(FOREIGN_MAPPED.get_connector_column(MODEL_CLS))
 
     def test_model_existing_compound_attr(self) -> None:
+        FOREIGN_MAPPED.alias = None
         self.assertIsInstance(PERSON.pets, Subquery)
         self.assertEqual(
             PERSON.pets.inner_sql,
@@ -48,10 +49,11 @@ class TestModel(unittest.TestCase):
             _ = PERSON.tots
 
     def test_model_label(self) -> None:
+        FOREIGN_MAPPED.alias = None
         table_as = FOREIGN_MAPPED.label("h")
-        self.assertIsInstance(table_as, Label)
-        self.assertEqual(table_as.denotee, FOREIGN_MAPPED)
-        self.assertEqual(table_as.text, "h")
+        self.assertIsInstance(table_as, type)
+        self.assertEqual(table_as, FOREIGN_MAPPED)
+        self.assertEqual(table_as.alias, "h")
 
 
 class TestColumn(unittest.TestCase):
@@ -82,13 +84,14 @@ class TestColumn(unittest.TestCase):
 
     def test_column_label(self) -> None:
         column_as = MODEL_CLS.age.label("pet_age")
-        self.assertIsInstance(column_as, Label)
-        self.assertEqual(column_as.denotee, MODEL_CLS.age)
-        self.assertEqual(column_as.text, "pet_age")
+        self.assertIsInstance(column_as, Column)
+        self.assertEqual(column_as, MODEL_CLS.age)
+        self.assertEqual(column_as.alias, "pet_age")
 
 
 class TestForeignKey(unittest.TestCase):
     def test_foreign_key(self):
+        FOREIGN_MAPPED.alias = None
         self.assertIsInstance(MODEL_CLS.owner_id.rel, ForeignKey)
         self.assertIs(MODEL_CLS.owner_id.rel.foreign_model, FOREIGN_MAPPED)
         self.assertIs(MODEL_CLS.owner_id.rel.reverse_name, "pets")

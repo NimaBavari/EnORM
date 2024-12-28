@@ -22,6 +22,7 @@ from .defs import Human
 
 class TestFunctions(unittest.TestCase):
     def test_char_length(self) -> None:
+        Human.alias = None
         long_names_query = Query(Human).filter(char_length(Human.full_name) > 15)
         self.assertEqual(str(long_names_query), "SELECT humans.* FROM humans WHERE CHAR_LENGTH(humans.full_name) > 15")
         bare_ex = char_length("example")

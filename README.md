@@ -2,42 +2,49 @@
 
 EnORM—EnDATA Object Relational Mapper.
 
+<!-- TOC -->
+
 - [EnORM](#enorm)
-  - [Example Usage](#example-usage)
-  - [Documentation](#documentation)
-    - [API Reference](#api-reference)
-      - [`const .fkey.CASCADE` \[source\]](#const-fkeycascade-source)
-      - [`class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` \[source\]](#class-columncolumntype_-lengthnone-relnone--primary_keyfalse-defaultnone-nullabletrue-source)
-      - [`class .types.Date` \[source\]](#class-typesdate-source)
-      - [`class .types.DateTime` \[source\]](#class-typesdatetime-source)
-      - [`class .db_engine.DBEngine(conn_str)` \[source\]](#class-db_enginedbengineconn_str-source)
-      - [`class .db_session.DBSession(engine)` \[source\]](#class-db_sessiondbsessionengine-source)
-      - [`class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` \[source\]](#class-fkeyforeignkeyforeign_model--reverse_name-on_delete-on_update-source)
-      - [`class .model.Model(**attrs)` \[source\]](#class-modelmodelattrs-source)
-      - [`class .types.Float` \[source\]](#class-typesfloat-source)
-      - [`class .types.Integer` \[source\]](#class-typesinteger-source)
-      - [`class .types.Serial` \[source\]](#class-typesserial-source)
-      - [`class .types.String` \[source\]](#class-typesstring-source)
-      - [`class .types.Time` \[source\]](#class-typestime-source)
-      - [`func agg(field, name_in_sql)` -\> `.column.BaseColumn` \[source\]](#func-aggfield-name_in_sql---columnbasecolumn-source)
-      - [`func count(field)` -\> `.column.BaseColumn` \[source\]](#func-countfield---columnbasecolumn-source)
-      - [`func sum_(field)` -\> `.column.BaseColumn` \[source\]](#func-sum_field---columnbasecolumn-source)
-      - [`func avg(field)` -\> `.column.BaseColumn` \[source\]](#func-avgfield---columnbasecolumn-source)
-      - [`func min_(field)` -\> `.column.BaseColumn` \[source\]](#func-min_field---columnbasecolumn-source)
-      - [`func max_(field)` -\> `.column.BaseColumn` \[source\]](#func-max_field---columnbasecolumn-source)
-      - [`func char_length(c)` -\> `.column.Scalar` \[source\]](#func-char_lengthc---columnscalar-source)
-      - [`func concat(*parts)` -\> `str` \[source\]](#func-concatparts---str-source)
-      - [`func current_date()` -\> `.column.Scalar` \[source\]](#func-current_date---columnscalar-source)
-      - [`func current_time(precision=None)` -\> `.column.Scalar` \[source\]](#func-current_timeprecisionnone---columnscalar-source)
-      - [`func current_timestamp(precision=None)` -\> `.column.Scalar` \[source\]](#func-current_timestampprecisionnone---columnscalar-source)
-      - [`func current_user()` -\> `.column.Scalar` \[source\]](#func-current_user---columnscalar-source)
-      - [`func local_time(precision=None)` -\> `.column.Scalar` \[source\]](#func-local_timeprecisionnone---columnscalar-source)
-      - [`func local_timestamp()` -\> `.column.Scalar` \[source\]](#func-local_timestamp---columnscalar-source)
-      - [`func now()` -\> `.column.Scalar` \[source\]](#func-now---columnscalar-source)
-      - [`func random()` -\> `.column.Scalar` \[source\]](#func-random---columnscalar-source)
-      - [`func session_user()` -\> `.column.Scalar` \[source\]](#func-session_user---columnscalar-source)
-      - [`func user()` -\> `.column.Scalar` \[source\]](#func-user---columnscalar-source)
-    - [Tutorial](#tutorial)
+    - [Example Usage](#example-usage)
+    - [Dev Scripts](#dev-scripts)
+        - [Set Up Dev Environment](#set-up-dev-environment)
+        - [Linting and Formatting](#linting-and-formatting)
+        - [Testing](#testing)
+    - [Documentation](#documentation)
+        - [API Reference](#api-reference)
+            - [const .fkey.CASCADE [source]](#const-fkeycascade-source)
+            - [class .column.Columntype_, length=None, rel=None, *, primary_key=False, default=None, nullable=True [source]](#class-columncolumntype_-lengthnone-relnone--primary_keyfalse-defaultnone-nullabletrue-source)
+            - [class .types.Date [source]](#class-typesdate-source)
+            - [class .types.DateTime [source]](#class-typesdatetime-source)
+            - [class .db_engine.DBEngineconn_str [source]](#class-db_enginedbengineconn_str-source)
+            - [class .db_session.DBSessionengine [source]](#class-db_sessiondbsessionengine-source)
+            - [class .fkey.ForeignKeyforeign_model, *, reverse_name, on_delete, on_update [source]](#class-fkeyforeignkeyforeign_model--reverse_name-on_delete-on_update-source)
+            - [class .model.Model**attrs [source]](#class-modelmodelattrs-source)
+            - [class .types.Float [source]](#class-typesfloat-source)
+            - [class .types.Integer [source]](#class-typesinteger-source)
+            - [class .types.Serial [source]](#class-typesserial-source)
+            - [class .types.String [source]](#class-typesstring-source)
+            - [class .types.Time [source]](#class-typestime-source)
+            - [func aggfield, name_in_sql -> .column.BaseColumn [source]](#func-aggfield-name_in_sql---columnbasecolumn-source)
+            - [func countfield -> .column.BaseColumn [source]](#func-countfield---columnbasecolumn-source)
+            - [func sum_field -> .column.BaseColumn [source]](#func-sum_field---columnbasecolumn-source)
+            - [func avgfield -> .column.BaseColumn [source]](#func-avgfield---columnbasecolumn-source)
+            - [func min_field -> .column.BaseColumn [source]](#func-min_field---columnbasecolumn-source)
+            - [func max_field -> .column.BaseColumn [source]](#func-max_field---columnbasecolumn-source)
+            - [func char_lengthc -> .column.Scalar [source]](#func-char_lengthc---columnscalar-source)
+            - [func concat*parts -> str [source]](#func-concatparts---str-source)
+            - [func current_date -> .column.Scalar [source]](#func-current_date---columnscalar-source)
+            - [func current_timeprecision=None -> .column.Scalar [source]](#func-current_timeprecisionnone---columnscalar-source)
+            - [func current_timestampprecision=None -> .column.Scalar [source]](#func-current_timestampprecisionnone---columnscalar-source)
+            - [func current_user -> .column.Scalar [source]](#func-current_user---columnscalar-source)
+            - [func local_timeprecision=None -> .column.Scalar [source]](#func-local_timeprecisionnone---columnscalar-source)
+            - [func local_timestamp -> .column.Scalar [source]](#func-local_timestamp---columnscalar-source)
+            - [func now -> .column.Scalar [source]](#func-now---columnscalar-source)
+            - [func random -> .column.Scalar [source]](#func-random---columnscalar-source)
+            - [func session_user -> .column.Scalar [source]](#func-session_user---columnscalar-source)
+            - [func user -> .column.Scalar [source]](#func-user---columnscalar-source)
+
+<!-- /TOC -->
 
 ## Example Usage
 
@@ -73,6 +80,43 @@ with DBSession(eng) as session:
     sharks = session.query(Employee, Employee.full_name, Employee.company_id).filter(Employee.salary > 90000.00).all()
 ```
 
+## Dev Scripts
+
+### Set Up Dev Environment
+
+Run:
+
+```sh
+make set_dev_env
+```
+
+to set up the dev environment.
+
+This sets:
+- git pre-commit hook
+
+If you intend to touch the code, set up dev environment first.
+
+### Linting and Formatting
+
+Run:
+
+```sh
+make cleanup
+```
+
+to run linting and formatting.
+
+### Testing
+
+Run:
+
+```sh
+make test
+```
+
+to start the tests.
+
 ## Documentation
 
 ### API Reference
@@ -83,7 +127,7 @@ Reference for the EnORM public API.
 
 String literal "cascade".
 
-#### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` [[source]](EnORM/column.py#L88-L160)
+#### `class .column.Column(type_, length=None, rel=None, *, primary_key=False, default=None, nullable=True)` [[source]](EnORM/column.py#L99-L172)
 
 Abstraction of a real table column in a database.
 
@@ -127,6 +171,12 @@ Abstraction of a real table column in a database.
 >
 > Name of the SQL table that the column belongs to.
 
+*Methods*
+
+> **label(alias)** -> `.column.BaseColumn`
+>
+> Returns the ORM representation for SQL column aliasing.
+
 #### `class .types.Date` [[source]](EnORM/types.py#L8)
 
 ORM representation of `datetime.date` objects.
@@ -155,7 +205,7 @@ Connection adapter for the `.db_session.DBSession` object.
 >
 > DB API cursor object.
 
-#### `class .db_session.DBSession(engine)` [[source]](EnORM/db_session.py#L16-L103)
+#### `class .db_session.DBSession(engine)` [[source]](EnORM/db_session.py#L95-L169)
 
 Singleton DB session to access the database across all uses.
 
@@ -171,13 +221,17 @@ Singleton DB session to access the database across all uses.
 >
 > DB engine that the session uses.
 >
-> **queue** : `list`
+> **transaction_manager** : `.db_session.TransactionManager`
 >
-> List of newly created instances of DB objects not yet persisted.
+> Transaction manager.
 >
-> **accumulator** : `list`
+> **persistence_manager** : `.db_session.PersistenceManager`
 >
-> List of ORM queries not yet executed.
+> Persistence manager.
+>
+> **query_executor** : `.db_session.QueryExecutor`
+>
+> Query executor.
 
 *Methods*
 
@@ -192,10 +246,6 @@ Singleton DB session to access the database across all uses.
 > **save()** -> `None`
 >
 > Persists all started queries.
->
-> **commit_adds()** -> `None`
->
-> Persists all added records on the DB session.
 
 #### `class .fkey.ForeignKey(foreign_model, *, reverse_name, on_delete, on_update)` [[source]](EnORM/fkey.py#L10-L36)
 
@@ -219,7 +269,7 @@ Representer of foreign key relations.
 >
 > Whether to update cascade style or not. Keyword-only.
 
-#### `class .model.Model(**attrs)` [[source]](EnORM/model.py#L13-L161)
+#### `class .model.Model(**attrs)` [[source]](EnORM/model.py#L30-L178)
 
 Abstract representer of an ORM database model in Python.
 
@@ -237,7 +287,7 @@ Abstract representer of an ORM database model in Python.
 
 *Methods*
 
-> **label(alias)** -> `.column.Label`
+> **label(alias)** -> `Type[.model.Model]`
 >
 > Returns the ORM representation for SQL table aliasing.
 
@@ -384,5 +434,3 @@ Describes the SQL function `SESSION_USER`.
 #### `func user()` -> `.column.Scalar` [[source]](EnORM/functions.py#L106-L108)
 
 Describes the SQL function `USER`.
-
-### Tutorial

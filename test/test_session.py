@@ -44,19 +44,19 @@ class TestDBSession(unittest.TestCase):
         with DBSession(self.e2) as sess:
             order = Order(country="Germany", city="Hamburg")
             sess.add(order)
-            self.assertListEqual(sess.queue, [order])
+            self.assertListEqual(sess.persistence_manager.queue, [order])
             self.assertListEqual(list(sess), [order])
-            sess.commit_adds()
+            sess.persistence_manager.auto_commit_adds()
             self.assertListEqual(sess.engine.conn.executions, [])
-            self.assertListEqual(sess.accumulator, [])
+            self.assertListEqual(sess.query_executor.accumulator, [])
 
     def test_session_query(self) -> None:
         q = self.sess2.query(Order, Order.country).filter(Order.id == 12)
         self.assertIsInstance(q, Query)
         self.assertEqual(str(q), "SELECT orders.country FROM orders WHERE orders.id = 12")
-        self.assertListEqual(self.sess2.accumulator, [q])
+        self.assertListEqual(self.sess2.query_executor.accumulator, [q])
 
     def test_session_save(self) -> None:
         self.sess2.save()
         self.assertListEqual(self.sess2.engine.conn.executions, [])
-        self.assertListEqual(self.sess2.accumulator, [])
+        self.assertListEqual(self.sess2.query_executor.accumulator, [])

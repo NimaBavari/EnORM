@@ -1,33 +1,21 @@
-"""Contains column-like classes and :class:`.column.Label`."""
+"""Contains column-like classes."""
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Type
 
 from .exceptions import IncompatibleArgument, OrphanColumn
 from .fkey import ForeignKey
 from .types import Serial, String
 
 
-class Label:
-    """Representer of all kinds of alias.
-
-    Never initiated directly, a :class:`.column.Label` object is created by invoking :meth:`label()` on objects of
-    subclasses of :class:`.column.BaseColumn` and on `MappedClass`.
-
-    :param denotee: the object that this instance labels
-    :param text:    alias text.
-    """
-
-    def __init__(self, denotee: Union[Type, BaseColumn], text: str) -> None:
-        self.denotee = denotee
-        self.text = text
-
-
 class BaseColumn:
     """Base class for representing a column-like value in a database."""
 
     aggs: List[str] = []
+
+    def __init__(self) -> None:
+        self.alias = None
 
     def binary_ops(self, other: Any, operator: str) -> str:
         """String representation for direct Python binary operations between :class:`column.BaseColumn` objects.
@@ -80,12 +68,13 @@ class BaseColumn:
         flat_list_str = "(%s)" % flat_list
         return self.binary_ops(flat_list_str, "NOT IN")
 
-    def label(self, alias: str) -> Label:
+    def label(self, alias: str) -> BaseColumn:
         """Returns the ORM representation for SQL column aliasing.
 
         :param alias:   alias as a string.
         """
-        return Label(self, alias)
+        self.alias = alias
+        return self
 
 
 class Scalar(BaseColumn):
@@ -95,6 +84,7 @@ class Scalar(BaseColumn):
     """
 
     def __init__(self, repr_) -> None:
+        super(Scalar, self).__init__()
         self.compound_variable_name = repr_
 
 
@@ -131,6 +121,7 @@ class Column(Field):
         default: Any = None,
         nullable: bool = True,
     ) -> None:
+        super(Column, self).__init__()
         self.type = type_
         self.length = length
         self.rel = rel
@@ -192,5 +183,6 @@ class VirtualField(Field):
     """
 
     def __init__(self, variable_name: str, view_name: str) -> None:
+        super(VirtualField, self).__init__()
         self.variable_name = variable_name
         self.view_name = view_name

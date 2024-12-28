@@ -4,10 +4,27 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Type
 
-from .column import Column, Label
+from .column import Column
 from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
 from .query import Query
 from .types import Float, Integer, Serial, String
+
+
+class SchemaDefinition:
+    """SQL schema definition for a user defined model."""
+
+    def __init__(self, model: Type) -> None:
+        self.model = model
+
+    def generate_sql(self) -> str:
+        """Generates SQL for creating the associated table."""
+        fields = self.model.get_fields()
+        tablename = self.model.get_table_name()
+        return """DROP TABLE %s IF EXISTS; CREATE TABLE %s (%s);""" % (
+            tablename,
+            tablename,
+            ", ".join(self.model.get_type_pref(field, val) for field, val in fields.items()),
+        )
 
 
 class Model:
@@ -28,24 +45,21 @@ class Model:
     }
 
     dep_mapping: Dict[type, List[type]] = {}
-
     model_definition_sqls: List[str] = []
+    alias: Optional[str] = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        fields = cls.get_fields()
-        tablename = cls.get_table_name()
-        def_sql = """DROP TABLE %s IF EXISTS; CREATE TABLE %s (%s);""" % (
-            tablename,
-            tablename,
-            ", ".join(cls.get_type_pref(field, val) for field, val in fields.items()),
-        )
-        cls.model_definition_sqls.append(def_sql)
 
+        schema = SchemaDefinition(cls)
+        table_creation_sql = schema.generate_sql()
+        cls.model_definition_sqls.append(table_creation_sql)
+
+        fields = cls.get_fields()
         for field, val in fields.items():
             Column.objects[id(val)] = {"model": cls, "variable_name": field}
             if val.rel is not None:
-                cls.dep_mapping[val.rel.foreign_model] = [*cls.dep_mapping.get(val.rel.foreign_model, []), cls]
+                cls.dep_mapping.setdefault(val.rel.foreign_model, []).append(cls)
 
     def __init__(self, **attrs: Any) -> None:
         self.attrs = attrs
@@ -80,7 +94,7 @@ class Model:
 
     @classmethod
     def get_fields(cls) -> Dict[str, Column]:
-        return {key: val for key, val in cls.__dict__.items() if not key.startswith("__") and not callable(key)}
+        return {key: val for key, val in cls.__dict__.items() if hasattr(val, "rel")}
 
     @classmethod
     def get_table_name(cls) -> str:
@@ -133,9 +147,10 @@ class Model:
         return "%s %s" % (field, type_pref_inc)
 
     @classmethod
-    def label(cls, alias: str) -> Label:
+    def label(cls, alias: str) -> Type:
         """Returns the ORM representation for SQL table aliasing."""
-        return Label(cls, alias)
+        cls.alias = alias
+        return cls
 
     def __getattr__(self, attr: str) -> Any:
         self_model = type(self)
