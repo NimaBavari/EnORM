@@ -5,3 +5,4 @@ black -l 120 .
 flake8 --max-line-length 120 . --exclude .venv,*/migrations
 mypy --disable-error-code import-not-found --explicit-package-bases .
 rm -rf .mypy_cache
+pydoc-markdown -I EnORM --render-toc > docs/api_docs.md
