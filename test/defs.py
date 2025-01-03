@@ -47,6 +47,9 @@ class FakeEngine(AbstractEngine):
         self.conn = FakeConnection(conn_str)
         self.cursor = self.conn.cursor()
 
+    def release_connection(self, conn: FakeConnection) -> None:
+        conn.close()
+
 
 class Human(Model):
     id = Column(Serial, primary_key=True)

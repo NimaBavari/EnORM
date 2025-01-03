@@ -1,6 +1,6 @@
 """Contains :class:`.query.Query` and :class:`.query.Subquery`.
 
-Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record` and the class for
+Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record`, and the class for
 any collection of them :class:`.query.QuerySet`.
 """
 
@@ -20,10 +20,10 @@ class Record:
 
     This can be a complete or an incomplete table row.
 
+    Proxy class, never directly instantiated.
+
     :param dct:     data that the record is based on
     :param query:   query that fetched this record, among possibly others.
-
-    This class is never directly instantiated.
     """
 
     def __init__(self, dct: Dict[str, Any], query: Query) -> None:
@@ -61,11 +61,11 @@ class Record:
 class QuerySet:
     """A class that represents database fetch results.
 
-    :param lst: underlying list of records.
-
     Immutable, ordered. Indexable, iterable, subscriptable.
 
     NOTE that this is terminal: no any query methods can be applied to the instance anymore.
+
+    :param lst: underlying list of records.
     """
 
     def __init__(self, lst: List[Record]) -> None:
@@ -101,10 +101,10 @@ class Subquery:
 
     A subquery is a nested SELECT statement that is used within another SQL statement.
 
-    :params inner_sql:      SQL string of the view represented by the subquery
-    :params column_names:   original names of the columns in that view.
-
     Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
+
+    :param inner_sql:       SQL string of the view represented by the subquery
+    :param column_names:    original names of the columns in that view.
     """
 
     subquery_idx = 0
@@ -219,18 +219,12 @@ class Query:
     """Main abstraction for querying for the whole ORM.
 
     There are two ways to generate :class:`.query.Query` objects: either by calling the
-    :meth:`.db_session.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
-    :class:`.query.Query` directly.
+    `.db_session.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
+    `.query.Query` directly.
 
     Gets as an argument:
 
-    :param entities: -- which correspond to the "columns" of the matched results.
-
-    .. warning::
-
-    :param entities: may contain at most one `MappedClass` instance.
-
-    NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
+    :param entities: -- which correspond to the "columns" of the matched results. May contain at most one `MappedClass` instance. NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
     """
 
     def __init__(self, *entities: Union[Type, BaseColumn]) -> None:
@@ -495,8 +489,11 @@ class Query:
 
     def update(self, **fields_values) -> None:
         """Two ways of updates:
-            1. `user = session.query(User).filter(User.username == "nbavari").first()` and then `user.age += 1`
-            2. `session.query(User).filter(User.username == "nbavari").update(**field_values)`
+
+            1. user = session.query(User).filter(User.username == "nbavari").first()
+            user.age += 1
+
+            2. session.query(User).filter(User.username == "nbavari").update(**field_values)
         You have to put `session.save()` after both to persist it.
         """
         self.builder.data["update"] = self.builder.data.pop("select")
@@ -506,10 +503,10 @@ class Query:
 
     def delete(self) -> None:
         """Example usage:
-        ```
-        session.query(User).filter(User.username == "nbavari").delete()
-        session.save()
-        ```
+
+            session.query(User).filter(User.username == "nbavari").delete()
+            session.save()
+        This will delete the user with the username "nbavari".
         """
         self.builder.data["delete"] = self.builder.data.pop("select")
         if "limit" in self.builder.data:

@@ -32,6 +32,11 @@
   * [user](#functions.user)
 * [fkey](#fkey)
   * [ForeignKey](#fkey.ForeignKey)
+* [pool](#pool)
+  * [ConnectionPool](#pool.ConnectionPool)
+    * [acquire](#pool.ConnectionPool.acquire)
+    * [release](#pool.ConnectionPool.release)
+    * [close\_all](#pool.ConnectionPool.close_all)
 * [exceptions](#exceptions)
   * [IncompatibleArgument](#exceptions.IncompatibleArgument)
   * [EntityError](#exceptions.EntityError)
@@ -100,6 +105,8 @@
 * [db\_engine](#db_engine)
   * [AbstractEngine](#db_engine.AbstractEngine)
   * [DBEngine](#db_engine.DBEngine)
+    * [get\_connection](#db_engine.DBEngine.get_connection)
+    * [release\_connection](#db_engine.DBEngine.release_connection)
 
 <a id="column"></a>
 
@@ -134,7 +141,6 @@ E.g.::
 or
 
     u = User(fullname="Abigail Smith", age=30)
-
     User.age > u.age
 
 Has the following:
@@ -194,13 +200,12 @@ Abstraction of a real table column in a database.
 
 **Arguments**:
 
-- `type_`: type of value that this column expects
+- `type_`: type of value that this column expects. Must be one of the types defined in :module:`.types`
 - `length`: max length of the expected value. Only works with :class:`.types.String`. Optional
 - `rel`: marker of a relationship -- a foreign key. Optional
 - `primary_key`: keyword-only. Whether or not the column is a primary key. Optional
 - `default`: keyword-only. Default value for cells of the column to take. Optional
 - `nullable`: keyword-only. Whether or not the cells of the column are nullable. Optional.
-NOTE that :param type_: must be any of the custom types defined in :module:`.types`.
 
 <a id="column.Column.model"></a>
 
@@ -463,6 +468,59 @@ This class implements logic handling relations across tables through connector c
 - `on_delete`: keyword-only. Whether to delete cascade style or not. Optional
 - `on_update`: keyword-only. Whether to update cascade style or not. Optional.
 
+<a id="pool"></a>
+
+# pool
+
+Contains :class:`.pool.ConnectionPool`.
+
+<a id="pool.ConnectionPool"></a>
+
+## ConnectionPool Objects
+
+```python
+class ConnectionPool()
+```
+
+Thread-safe connection pool for managing database connections.
+
+Uses a FIFO queue to manage connections. Implements lazy initialization of connections.
+
+**Arguments**:
+
+- `conn_str`: database location, along with auth params
+- `pool_size`: size of the connection pool.
+
+<a id="pool.ConnectionPool.acquire"></a>
+
+#### acquire
+
+```python
+def acquire(timeout: Optional[float] = None) -> pyodbc.Connection
+```
+
+Acquires a connection from the pool.
+
+<a id="pool.ConnectionPool.release"></a>
+
+#### release
+
+```python
+def release(conn: pyodbc.Connection) -> None
+```
+
+Releases a connection back to the pool.
+
+<a id="pool.ConnectionPool.close_all"></a>
+
+#### close\_all
+
+```python
+def close_all() -> None
+```
+
+Closes all connections in the pool.
+
 <a id="exceptions"></a>
 
 # exceptions
@@ -585,7 +643,7 @@ Raised when a column is instantiated outside a model definition.
 
 Contains :class:`.query.Query` and :class:`.query.Subquery`.
 
-Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record` and the class for
+Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record`, and the class for
 any collection of them :class:`.query.QuerySet`.
 
 <a id="query.Record"></a>
@@ -600,11 +658,12 @@ Representer of each of a database fetch results.
 
 This can be a complete or an incomplete table row.
 
+Proxy class, never directly instantiated.
+
 **Arguments**:
 
 - `dct`: data that the record is based on
 - `query`: query that fetched this record, among possibly others.
-This class is never directly instantiated.
 
 <a id="query.Record.is_complete_row"></a>
 
@@ -627,12 +686,13 @@ class QuerySet()
 
 A class that represents database fetch results.
 
-**Arguments**:
-
-- `lst`: underlying list of records.
 Immutable, ordered. Indexable, iterable, subscriptable.
 
 NOTE that this is terminal: no any query methods can be applied to the instance anymore.
+
+**Arguments**:
+
+- `lst`: underlying list of records.
 
 <a id="query.Subquery"></a>
 
@@ -646,6 +706,12 @@ Representer of an SQL subquery.
 
 A subquery is a nested SELECT statement that is used within another SQL statement.
 
+Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
+
+**Arguments**:
+
+- `inner_sql`: SQL string of the view represented by the subquery
+- `column_names`: original names of the columns in that view.
 
 <a id="query.QueryBuilder"></a>
 
@@ -690,13 +756,14 @@ class Query()
 Main abstraction for querying for the whole ORM.
 
 There are two ways to generate :class:`.query.Query` objects: either by calling the
+`.db_session.DBSession.query` method, which is the most usual way, or, less commonly, by instantiating
+`.query.Query` directly.
+
+Gets as an argument:
 
 **Arguments**:
 
-- `entities`: -- which correspond to the "columns" of the matched results.
-.. warning::
-- `entities`: may contain at most one `MappedClass` instance.
-NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
+- `entities`: -- which correspond to the "columns" of the matched results. May contain at most one `MappedClass` instance. NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
 
 <a id="query.Query.join"></a>
 
@@ -953,8 +1020,11 @@ def update(**fields_values) -> None
 ```
 
 Two ways of updates:
-    1. `user = session.query(User).filter(User.username == "nbavari").first()` and then `user.age += 1`
-    2. `session.query(User).filter(User.username == "nbavari").update(**field_values)`
+
+    1. user = session.query(User).filter(User.username == "nbavari").first()
+    user.age += 1
+
+    2. session.query(User).filter(User.username == "nbavari").update(**field_values)
 You have to put `session.save()` after both to persist it.
 
 <a id="query.Query.delete"></a>
@@ -966,10 +1036,10 @@ def delete() -> None
 ```
 
 Example usage:
-```
-session.query(User).filter(User.username == "nbavari").delete()
-session.save()
-```
+
+    session.query(User).filter(User.username == "nbavari").delete()
+    session.save()
+This will delete the user with the username "nbavari".
 
 <a id="types"></a>
 
@@ -985,7 +1055,7 @@ Contains definitions for custom types.
 class Serial(Integer)
 ```
 
-ORM representation of serial types in SQL variants.
+ORM representation of serial types in SQL variants. Inherits from :class:`.types.Integer`.
 
 
 <a id="db_session"></a>
@@ -1002,12 +1072,11 @@ Contains :class:`.db_session.DBSession`.
 class TransactionManager()
 ```
 
-A transaction manager class.
+Used within repository pattern in :class:`.db_session.DBSession` to manage transactions.
 
 **Arguments**:
 
 - `engine`: DB engine that the transaction manager uses.
-Used within repository pattern in :class:`.db_session.DBSession`. to manage transactions.
 
 <a id="db_session.TransactionManager.commit"></a>
 
@@ -1047,12 +1116,11 @@ Closes the connection.
 class PersistenceManager()
 ```
 
-A persistance manager class.
+Used within repository pattern in :class:`.db_session.DBSession` to manage persistence.
 
 **Arguments**:
 
 - `engine`: DB engine that the persistence manager uses.
-Used within repository pattern in :class:`.db_session.DBSession`. to manage persistence.
 
 <a id="db_session.PersistenceManager.add"></a>
 
@@ -1082,12 +1150,11 @@ Persists all added objects.
 class QueryExecutor()
 ```
 
-A query executor class.
+Used within repository pattern in :class:`.db_session.DBSession` to execute queries.
 
 **Arguments**:
 
 - `engine`: DB engine that the query executor uses.
-Used within repository pattern in :class:`.db_session.DBSession`. to execute queries.
 
 <a id="db_session.QueryExecutor.query"></a>
 
@@ -1121,14 +1188,15 @@ A singleton DB session class.
 
 This class implements a singleton DB session to be used to access the database.
 
-**Arguments**:
-
-- `engine`: DB engine that the session uses.
 Implements a context manager for a more secure session. The following is an idiomatic usage::
 
     eng = DBEngine("postgresql://user:secret@localhost:5432/my_db")
     with DBSession(eng) as session:
         pass  # do something with session
+
+**Arguments**:
+
+- `engine`: DB engine that the session uses.
 
 <a id="db_session.DBSession.query"></a>
 
@@ -1255,8 +1323,30 @@ Connection adapter for the :class:`.db_session.DBSession` object.
 
 This provides a thin wrapper around DB driver API.
 
+The class keeps record of the most recent active instance as an inner state.
+
 **Arguments**:
 
-- `conn_str`: database location, along with auth params.
-The class keeps record of the most recent active instance as an inner state.
+- `conn_str`: database location, along with auth params
+- `pool_size`: keyword-only. Size of the connection pool.
+
+<a id="db_engine.DBEngine.get_connection"></a>
+
+#### get\_connection
+
+```python
+def get_connection() -> pyodbc.Connection
+```
+
+Gets a connection from the pool.
+
+<a id="db_engine.DBEngine.release_connection"></a>
+
+#### release\_connection
+
+```python
+def release_connection(conn: pyodbc.Connection) -> None
+```
+
+Releases a connection back to the pool.
 

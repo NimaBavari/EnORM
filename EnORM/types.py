@@ -13,11 +13,9 @@ Time = time
 
 
 class Serial(Integer):
-    """ORM representation of serial types in SQL variants.
+    """ORM representation of serial types in SQL variants. Inherits from :class:`.types.Integer`.
 
     :params val:    underlying integer value.
-
-    Inherits from :class:`.types.Integer`.
     """
 
     def __init__(self, val: Integer) -> None:

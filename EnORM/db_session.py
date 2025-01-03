@@ -14,11 +14,9 @@ from .query import Query
 
 
 class TransactionManager:
-    """A transaction manager class.
+    """Used within repository pattern in :class:`.db_session.DBSession` to manage transactions.
 
     :param engine:  DB engine that the transaction manager uses.
-
-    Used within repository pattern in :class:`.db_session.DBSession`. to manage transactions.
     """
 
     def __init__(self, engine: AbstractEngine) -> None:
@@ -39,11 +37,9 @@ class TransactionManager:
 
 
 class PersistenceManager:
-    """A persistance manager class.
+    """Used within repository pattern in :class:`.db_session.DBSession` to manage persistence.
 
     :param engine:  DB engine that the persistence manager uses.
-
-    Used within repository pattern in :class:`.db_session.DBSession`. to manage persistence.
     """
 
     def __init__(self, engine: AbstractEngine) -> None:
@@ -65,11 +61,9 @@ class PersistenceManager:
 
 
 class QueryExecutor:
-    """A query executor class.
+    """Used within repository pattern in :class:`.db_session.DBSession` to execute queries.
 
     :param engine:  DB engine that the query executor uses.
-
-    Used within repository pattern in :class:`.db_session.DBSession`. to execute queries.
     """
 
     def __init__(self, engine: AbstractEngine) -> None:
@@ -97,13 +91,13 @@ class DBSession:
 
     This class implements a singleton DB session to be used to access the database.
 
-    :param engine:  DB engine that the session uses.
-
     Implements a context manager for a more secure session. The following is an idiomatic usage::
 
         eng = DBEngine("postgresql://user:secret@localhost:5432/my_db")
         with DBSession(eng) as session:
             pass  # do something with session
+
+    :param engine:  DB engine that the session uses.
     """
 
     _instance: Optional[DBSession] = None
@@ -145,12 +139,14 @@ class DBSession:
             return
 
         try:
-            self.persistence_manager.auto_commit_adds()
-        except exc_type:
-            self.transaction_manager.rollback()
-            raise
+            if exc_type is None:
+                self.persistence_manager.auto_commit_adds()
+            else:
+                self.transaction_manager.rollback()
+                raise exc_value
         finally:
             self.transaction_manager.close()
+            self.engine.release_connection(self.engine.conn)
             DBSession._instance = None
 
     def __iter__(self) -> Iterator[Model]:

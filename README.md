@@ -2,6 +2,39 @@
 
 EnORM---EnDATA Object Relational Mapper.
 
+## Features
+
+- **Model Definition:**
+    - Define database tables using Python classes.
+    - Support for primary keys, foreign keys, constraints, and default values.
+- **Type System:**
+    - Use Python-native types for columns with support for custom SQL-compatible types.
+- **Query Building:**
+    - Pythonic API for constructing queries.
+    - Filtering, joining, grouping, ordering, and aggregation.
+    - Ability to use Python expressions directly in queries.
+- **Subquerying:**
+    - Full support for subqueries as nested or derived tables.
+    - Essential for advanced query composition and reusable query fragments.
+- **Relationships:**
+    - Define one-to-many and many-to-many relationships.
+    - Cascading updates and deletes for referential integrity.
+- **Transactions:**
+    - Transaction management with commit and rollback control.
+- **Database Session:**
+    - Manage database interactions with a session.
+    - Context manager support for secure and efficient operations.
+- **Connection Pooling:**
+    - Thread-safe connection management with pooling for performance.
+- **Schema Management:**
+    - Automatic SQL generation for table creation.
+- **Custom Functions and Aggregates:**
+    - Built-in support for SQL functions and aggregates, extensible for complex operations.
+- **Data Validation:**
+    - Automatic enforcement of field types and constraints during record creation and updates.
+- **Custom Exceptions:**
+    - Comprehensive exceptions for debugging and error reporting.
+
 ## Example Usage
 
 ``` python
@@ -25,8 +58,7 @@ class Employee(Model):
     company_id = Column(Serial, None, ForeignKey(Company, reverse_name="employees", on_delete=CASCADE))
 
 
-eng = DBEngine("postgresql://user:secret@localhost:5432/my_db")
-
+eng = DBEngine("postgresql://user:secret@localhost:5432/my_db", pool_size=64)
 with DBSession(eng) as session:
     the_company = session.query(Company).filter(Company.country == "United Kingdom").first()
 
