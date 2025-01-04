@@ -1,5 +1,11 @@
 # EnORM
 
+![PyPI Version](https://img.shields.io/pypi/v/enorm)
+[![PyPI Downloads](https://static.pepy.tech/badge/enorm)](https://pepy.tech/projects/enorm)
+![License](https://img.shields.io/github/license/NimaBavari/EnORM)
+![Dependencies](https://img.shields.io/librariesio/release/pypi/enorm)
+![GitHub Stars](https://img.shields.io/github/stars/NimaBavari/EnORM)
+
 EnORM---EnDATA Object Relational Mapper.
 
 ## Features
