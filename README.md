@@ -41,6 +41,16 @@ EnORM---EnDATA Object Relational Mapper.
 - **Custom Exceptions:**
     - Comprehensive exceptions for debugging and error reporting.
 
+## Installation
+
+EnORM is a PyPI-indexed library. You can install it by running:
+
+```sh
+pip install EnORM
+```
+
+EnORM supports Python 3.10+.
+
 ## Example Usage
 
 ``` python
@@ -73,6 +83,10 @@ with DBSession(eng) as session:
     
     sharks = session.query(Employee, Employee.full_name, Employee.company_id).filter(Employee.salary > 90000.00).all()
 ```
+
+## Documentation
+
+See full [documentation](docs/api_docs.md).
 
 ## Dev Scripts
 
@@ -110,7 +124,3 @@ make test
 ```
 
 to start the tests.
-
-## Documentation
-
-See full [documentation](docs/api_docs.md).
