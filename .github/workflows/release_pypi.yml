@@ -21,7 +21,10 @@ jobs:
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build
+        pip install build twine
+  
+    - name: Convert documentation relative links to absolute
+      run: sed -E -i "s|\[([^]]+)\]\((docs/[^\)]+)\)|[\1](https://github.com/NimaBavari/EnORM/blob/master/\2)|g" "README.md"
 
     - name: Build the package
       run: python -m build
@@ -30,6 +33,4 @@ jobs:
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python -m pip install --upgrade twine
-        python -m twine upload dist/*
+      run: python -m twine upload dist/*
