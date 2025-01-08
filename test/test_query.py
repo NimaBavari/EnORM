@@ -5,7 +5,7 @@ from EnORM.exceptions import EntityError, FieldNotExist, MethodChainingError
 from EnORM.functions import count
 from EnORM.query import Query, QuerySet, Record, Subquery
 
-from .defs import FakeEngine, Human, Pet
+from .defs import POSTGRESQL_CONN_STR, FakeEngine, Human, Pet
 
 
 class TestQuery(unittest.TestCase):
@@ -129,7 +129,7 @@ class TestQuery(unittest.TestCase):
         self.assertEqual(str(q), "UPDATE humans SET humans.age = 20 WHERE humans.age = 30")
 
     def test_query_update_indirect(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
         result = q.first()
@@ -148,7 +148,7 @@ class TestQuery(unittest.TestCase):
         self.assertEqual(str(q), "DELETE FROM humans WHERE humans.age = 30")
 
     def test_query_execs(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         q = Query(Human, Human.id, Human.full_name).filter(Human.age == 30)
         self.assertEqual(q.count(), 2)
@@ -156,7 +156,7 @@ class TestQuery(unittest.TestCase):
         AbstractEngine.active_instance = None
 
     def test_query_record_identity(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         q = Query(Human, Human.id, Human.full_name, Human.age).filter(Human.age == 30)
         res = q.first()
@@ -165,7 +165,7 @@ class TestQuery(unittest.TestCase):
         self.assertEqual(res.query, q)
 
     def test_query_record_nonexistent_attr(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         res = Query(Human, Human.id, Human.full_name).filter(Human.age == 30).first()
         with self.assertRaises(FieldNotExist):
@@ -173,14 +173,14 @@ class TestQuery(unittest.TestCase):
         AbstractEngine.active_instance = None
 
     def test_query_record_existent_attr(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         res = Query(Human, Human.id, Human.full_name, Human.age).filter(Human.age == 30).first()
         self.assertEqual(res.age, 30)
         AbstractEngine.active_instance = None
 
     def test_query_record_reverse_name_row(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         res = Query(Human).filter(Human.age == 30).first()
         self.assertEqual(
@@ -190,7 +190,7 @@ class TestQuery(unittest.TestCase):
         AbstractEngine.active_instance = None
 
     def test_query_record_reverse_name_not_row(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         res = Query(Human, Human.id, Human.full_name).filter(Human.age == 30).first()
         with self.assertRaises(FieldNotExist):
@@ -198,7 +198,7 @@ class TestQuery(unittest.TestCase):
         AbstractEngine.active_instance = None
 
     def test_query_queryset(self) -> None:
-        AbstractEngine.active_instance = FakeEngine("blah blah blah")
+        AbstractEngine.active_instance = FakeEngine(POSTGRESQL_CONN_STR)
         Human.alias = None
         q = Query(Human, Human.id, Human.full_name, Human.age).filter(Human.age == 30)
         res = q.all()

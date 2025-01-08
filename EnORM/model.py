@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Type
 
+from .backends import String
 from .column import Column
 from .exceptions import FieldNotExist, MissingRequiredField, WrongFieldType
 from .query import Query
-from .types import Float, Integer, Serial, String
 
 
 class SchemaDefinition:
@@ -36,13 +36,7 @@ class Model:
     tables.
     """
 
-    __table__ = None
-    __TYPES = {
-        Integer: "INTEGER",
-        String: "VARCHAR",
-        Float: "NUMERIC",
-        Serial: "SERIAL",
-    }
+    __table__: Optional[str] = None
 
     dep_mapping: Dict[type, List[type]] = {}
     model_definition_sqls: List[str] = []
@@ -94,11 +88,11 @@ class Model:
 
     @classmethod
     def get_fields(cls) -> Dict[str, Column]:
-        return {key: val for key, val in cls.__dict__.items() if hasattr(val, "rel")}
+        return {key: val for key, val in cls.__dict__.items() if isinstance(val, Column)}
 
     @classmethod
     def get_table_name(cls) -> str:
-        return cls.__table__ or "%ss" % cls.__qualname__.split(".")[-1].lower()
+        return cls.__table__ or "%ss" % cls.__name__.split(".")[-1].lower()
 
     @classmethod
     def get_primary_key_column(cls) -> Optional[Column]:
@@ -113,7 +107,7 @@ class Model:
 
     @classmethod
     def get_type_pref(cls, field: str, val: Column) -> str:
-        type_pref_inc = cls.__TYPES[val.type]
+        type_pref_inc = "type_plchdr:%s" % val.type.__name__
         if val.rel is not None:
             pref = "%s %s FOREIGN KEY (%s) REFERENCES %s(%s)" % (
                 field,
@@ -134,8 +128,6 @@ class Model:
             type_pref_inc = "TEXT"
 
         if val.primary_key:
-            if val.type == Serial:
-                type_pref_inc += " AUTOINCREMENT"
             type_pref_inc += " PRIMARY KEY"
 
         if val.default:

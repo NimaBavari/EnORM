@@ -30,6 +30,7 @@
   * [random](#functions.random)
   * [session\_user](#functions.session_user)
   * [user](#functions.user)
+* [constants](#constants)
 * [fkey](#fkey)
   * [ForeignKey](#fkey.ForeignKey)
 * [pool](#pool)
@@ -41,6 +42,7 @@
   * [IncompatibleArgument](#exceptions.IncompatibleArgument)
   * [EntityError](#exceptions.EntityError)
   * [MethodChainingError](#exceptions.MethodChainingError)
+  * [BackendSupportError](#exceptions.BackendSupportError)
   * [Fixed](#exceptions.Fixed)
   * [ValueOutOfBound](#exceptions.ValueOutOfBound)
   * [FieldNotExist](#exceptions.FieldNotExist)
@@ -78,8 +80,6 @@
     * [count](#query.Query.count)
     * [update](#query.Query.update)
     * [delete](#query.Query.delete)
-* [types](#types)
-  * [Serial](#types.Serial)
 * [db\_session](#db_session)
   * [TransactionManager](#db_session.TransactionManager)
     * [commit](#db_session.TransactionManager.commit)
@@ -91,6 +91,8 @@
   * [QueryExecutor](#db_session.QueryExecutor)
     * [query](#db_session.QueryExecutor.query)
     * [execute\_queries](#db_session.QueryExecutor.execute_queries)
+  * [SQLTypeResolver](#db_session.SQLTypeResolver)
+    * [get\_native\_type\_name](#db_session.SQLTypeResolver.get_native_type_name)
   * [DBSession](#db_session.DBSession)
     * [query](#db_session.DBSession.query)
     * [add](#db_session.DBSession.add)
@@ -103,10 +105,18 @@
     * [sql](#model.Model.sql)
 * [\_\_init\_\_](#__init__)
 * [db\_engine](#db_engine)
+  * [DialectInferrer](#db_engine.DialectInferrer)
+    * [sql\_dialect](#db_engine.DialectInferrer.sql_dialect)
   * [AbstractEngine](#db_engine.AbstractEngine)
   * [DBEngine](#db_engine.DBEngine)
     * [get\_connection](#db_engine.DBEngine.get_connection)
     * [release\_connection](#db_engine.DBEngine.release_connection)
+* [backends](#backends)
+  * [Serial](#backends.Serial)
+* [backends.oracle](#backends.oracle)
+* [backends.postgresql](#backends.postgresql)
+* [backends.mysql](#backends.mysql)
+* [backends.sql\_server](#backends.sql_server)
 
 <a id="column"></a>
 
@@ -443,6 +453,12 @@ def user() -> Scalar
 
 Describes the SQL function `USER`.
 
+<a id="constants"></a>
+
+# constants
+
+Contains library-wide constants.
+
 <a id="fkey"></a>
 
 # fkey
@@ -556,6 +572,16 @@ class MethodChainingError(ValueError)
 ```
 
 Raised when a wrong sequence of methods are chained together on :class:`.query.Query`.
+
+<a id="exceptions.BackendSupportError"></a>
+
+## BackendSupportError Objects
+
+```python
+class BackendSupportError(ValueError)
+```
+
+Raised when a backend or backend-specific type is not supported.
 
 <a id="exceptions.Fixed"></a>
 
@@ -1041,23 +1067,6 @@ Example usage:
     session.save()
 This will delete the user with the username "nbavari".
 
-<a id="types"></a>
-
-# types
-
-Contains definitions for custom types.
-
-<a id="types.Serial"></a>
-
-## Serial Objects
-
-```python
-class Serial(Integer)
-```
-
-ORM representation of serial types in SQL variants. Inherits from :class:`.types.Integer`.
-
-
 <a id="db_session"></a>
 
 # db\_session
@@ -1175,6 +1184,32 @@ def execute_queries() -> None
 ```
 
 Executes accumulated queries.
+
+<a id="db_session.SQLTypeResolver"></a>
+
+## SQLTypeResolver Objects
+
+```python
+class SQLTypeResolver()
+```
+
+Used within repository pattern in :class:`.db_session.DBSession` to resolve native SQL types in the dialect
+
+that the given DB engine uses.
+
+**Arguments**:
+
+- `engine`: DB engine that the type resolver uses.
+
+<a id="db_session.SQLTypeResolver.get_native_type_name"></a>
+
+#### get\_native\_type\_name
+
+```python
+def get_native_type_name(type_name: str) -> str
+```
+
+Resolves the native SQL type for the given type name.
 
 <a id="db_session.DBSession"></a>
 
@@ -1299,7 +1334,32 @@ SQL statement for new object creation.
 
 # db\_engine
 
-Contains abstract and concrete database engine classes.
+Contains abstract and concrete database engine classes, as well as the dialect inferrer class.
+
+<a id="db_engine.DialectInferrer"></a>
+
+## DialectInferrer Objects
+
+```python
+class DialectInferrer()
+```
+
+Delegatee class concerning with encapsulation of the sql dialect inferrence functionality.
+
+**Arguments**:
+
+- `conn_str`: The database connection string used to infer the SQL dialect.
+
+<a id="db_engine.DialectInferrer.sql_dialect"></a>
+
+#### sql\_dialect
+
+```python
+@property
+def sql_dialect() -> str
+```
+
+Infers the SQL dialect from the connection string.
 
 <a id="db_engine.AbstractEngine"></a>
 
@@ -1321,7 +1381,7 @@ class DBEngine(AbstractEngine)
 
 Connection adapter for the :class:`.db_session.DBSession` object.
 
-This provides a thin wrapper around DB driver API.
+Downstream from a thread-safe connection pool. This connection pool uses lazy loading.
 
 The class keeps record of the most recent active instance as an inner state.
 
@@ -1349,4 +1409,45 @@ def release_connection(conn: pyodbc.Connection) -> None
 ```
 
 Releases a connection back to the pool.
+
+<a id="backends"></a>
+
+# backends
+
+Contains basic datatypes.
+
+<a id="backends.Serial"></a>
+
+## Serial Objects
+
+```python
+class Serial(Integer)
+```
+
+ORM representation of serial types in SQL variants. Inherits from :class:`.types.Integer`.
+
+
+<a id="backends.oracle"></a>
+
+# backends.oracle
+
+Contains datatypes to support Oracle DB backend.
+
+<a id="backends.postgresql"></a>
+
+# backends.postgresql
+
+Contains datatypes to support PostgreSQL backend.
+
+<a id="backends.mysql"></a>
+
+# backends.mysql
+
+Contains datatypes to support MySQL backend.
+
+<a id="backends.sql_server"></a>
+
+# backends.sql\_server
+
+Contains datatypes to support SQL Server backend.
 

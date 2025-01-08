@@ -3,7 +3,7 @@ import unittest
 from EnORM import Column, DBSession, Model, Serial, String
 from EnORM.query import Query
 
-from .defs import FakeEngine
+from .defs import MYSQL_CONN_STR, POSTGRESQL_CONN_STR, FakeEngine
 
 
 class Order(Model):
@@ -15,8 +15,8 @@ class Order(Model):
 
 class TestDBSession(unittest.TestCase):
     def setUp(self) -> None:
-        self.e1 = FakeEngine("remote DB connection string")
-        self.e2 = FakeEngine("another DB connection string")
+        self.e1 = FakeEngine(POSTGRESQL_CONN_STR)
+        self.e2 = FakeEngine(MYSQL_CONN_STR)
         self.sess1 = DBSession(self.e1)
         self.sess2 = DBSession(self.e2)
 

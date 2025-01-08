@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import Any, List, Tuple
 
 from EnORM import CASCADE, Column, ForeignKey, Integer, Model, Serial, String
-from EnORM.db_engine import AbstractEngine
+from EnORM.db_engine import AbstractEngine, DialectInferrer
+
+POSTGRESQL_CONN_STR = "postgresql://user:secret@localhost:5432/mydatabase"
+MYSQL_CONN_STR = "mysql://user:secret@localhost:3306/mydatabase"
+SQLITE_CONN_STR = "sqlite:///:memory:"
+SQL_SERVER_CONN_STR = "mssql://user:secret@localhost:1433/mydatabase"
+ORACLE_CONN_STR = "oracle://user:secret@localhost:1521?sid=ORCL"
 
 
 class FakeCursor:
@@ -44,6 +50,8 @@ class FakeConnection:
 
 class FakeEngine(AbstractEngine):
     def __init__(self, conn_str: str) -> None:
+        self.dialect_inferrer = DialectInferrer(conn_str)
+        self.dialect = self.dialect_inferrer.sql_dialect
         self.conn = FakeConnection(conn_str)
         self.cursor = self.conn.cursor()
 

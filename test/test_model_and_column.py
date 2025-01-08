@@ -79,8 +79,8 @@ class TestColumn(unittest.TestCase):
         self.assertEqual(MODEL_CLS.owner_id.view_name, "pets")
 
     def test_column_attr_types_with_model_context(self) -> None:
-        self.assertEqual(MODEL_CLS.name.type, str)
-        self.assertEqual(MODEL_CLS.age.type, int)
+        self.assertEqual(MODEL_CLS.name.type, String)
+        self.assertEqual(MODEL_CLS.age.type, Integer)
 
     def test_column_label(self) -> None:
         column_as = MODEL_CLS.age.label("pet_age")

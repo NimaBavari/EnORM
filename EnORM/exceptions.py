@@ -15,6 +15,10 @@ class MethodChainingError(ValueError):
     """Raised when a wrong sequence of methods are chained together on :class:`.query.Query`."""
 
 
+class BackendSupportError(ValueError):
+    """Raised when a backend or backend-specific type is not supported."""
+
+
 class Fixed(Exception):
     """Base class for all messaged exceptions."""
 
@@ -44,7 +48,7 @@ class WrongFieldType(Fixed):
     """Raised when the value of a column is of another type than is declared."""
 
     def __init__(self, field_name: str, exp_type: Type, actual_type: Type) -> None:
-        self.message = "Field %s expected %s but got %s." % (
+        self.message = "Field '%s' expected %s but got %s." % (
             field_name,
             exp_type,
             actual_type,

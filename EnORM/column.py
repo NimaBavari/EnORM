@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional, Type
 
+from .backends import Binary, Serial, String
 from .exceptions import IncompatibleArgument, OrphanColumn
 from .fkey import ForeignKey
-from .types import Serial, String
 
 
 class BaseColumn:
@@ -139,11 +139,11 @@ class Column(Field):
                 raise IncompatibleArgument("Wrong type for `ForeignKey`.")
 
         if self.length is not None:
-            if self.type != String:
-                raise IncompatibleArgument("Only `String` type can have length.")
+            if self.type not in [String, Binary]:
+                raise IncompatibleArgument("%s type cannot have length." % self.type)
 
             if not isinstance(self.length, int):
-                raise IncompatibleArgument("`String` type should have an integer length.")
+                raise IncompatibleArgument("%s type should have an integer length." % self.type)
 
     @property
     def model(self) -> Type:

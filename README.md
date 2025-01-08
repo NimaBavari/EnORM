@@ -15,6 +15,7 @@ EnORM---EnDATA Object Relational Mapper.
     - Support for primary keys, foreign keys, constraints, and default values.
 - **Type System:**
     - Use Python-native types for columns with support for custom SQL-compatible types.
+    - Full support for PostgreSQL, MySQL, SQLite, Oracle, and SQL Server backends with in-house types.
 - **Query Building:**
     - Pythonic API for constructing queries.
     - Filtering, joining, grouping, ordering, and aggregation.

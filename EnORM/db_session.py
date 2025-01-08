@@ -8,7 +8,9 @@ from typing import Any, Iterator, List, Optional, Type, Union
 import pyodbc
 
 from .column import BaseColumn
+from .constants import TYPES
 from .db_engine import AbstractEngine
+from .exceptions import BackendSupportError
 from .model import Model
 from .query import Query
 
@@ -86,6 +88,26 @@ class QueryExecutor:
         self.accumulator = []
 
 
+class SQLTypeResolver:
+    """Used within repository pattern in :class:`.db_session.DBSession` to resolve native SQL types in the dialect
+    that the given DB engine uses.
+
+    :param engine:  DB engine that the type resolver uses.
+    """
+
+    def __init__(self, engine: AbstractEngine) -> None:
+        self.engine = engine
+        if not self.engine.dialect in TYPES:
+            raise BackendSupportError("Unsupported dialect: '%s'." % self.engine.dialect)
+
+    def get_native_type_name(self, type_name: str) -> str:
+        """Resolves the native SQL type for the given type name."""
+        if not type_name in TYPES[self.engine.dialect]:
+            raise BackendSupportError("%s not supports the type '%s'." % (self.engine.dialect, type_name))
+
+        return TYPES[self.engine.dialect][type_name]
+
+
 class DBSession:
     """A singleton DB session class.
 
@@ -115,9 +137,14 @@ class DBSession:
         self.transaction_manager = TransactionManager(self.engine)
         self.persistence_manager = PersistenceManager(self.engine)
         self.query_executor = QueryExecutor(self.engine)
+        self.type_resolver = SQLTypeResolver(self.engine)
 
         try:
             for sql in Model.model_definition_sqls:
+                for word in sql.split():
+                    if "type_plchdr:" in word:
+                        _, type_name = word.strip(",.()").split(":")
+                        sql = sql.replace(word, self.type_resolver.get_native_type_name(type_name))
                 self.engine.cursor.execute(sql)
         except pyodbc.DatabaseError:
             raise

@@ -1,14 +1,16 @@
+from .backends import Binary, Boolean, Date, DateTime, Float, Integer, Numeric, Serial, String, Time
 from .column import Column
 from .db_engine import DBEngine
 from .db_session import DBSession
 from .fkey import CASCADE, ForeignKey
 from .model import Model
-from .types import Date, DateTime, Float, Integer, Serial, String, Time
 
-__version__ = "1.0.1"
+__version__ = "1.1.2"
 
 __all__ = [
     "CASCADE",
+    "Binary",
+    "Boolean",
     "Column",
     "Date",
     "DateTime",
@@ -18,6 +20,7 @@ __all__ = [
     "Model",
     "Float",
     "Integer",
+    "Numeric",
     "Serial",
     "String",
     "Time",
