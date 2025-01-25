@@ -98,8 +98,8 @@ class Field(BaseColumn):
 class Column(Field):
     """Abstraction of a real table column in a database.
 
-    :param type_:       type of value that this column expects. Must be one of the types defined in :module:`.types`
-    :param length:      max length of the expected value. Only works with :class:`.types.String`. Optional
+    :param type_:       type of value that this column expects. Must be one of the types defined in :module:`.backends`
+    :param length:      max length of the expected value. Only works with :class:`.backends.String`. Optional
     :param rel:         marker of a relationship -- a foreign key. Optional
     :param primary_key: keyword-only. Whether or not the column is a primary key. Optional
     :param default:     keyword-only. Default value for cells of the column to take. Optional
@@ -173,7 +173,7 @@ class VirtualField(Field):
     """Abstraction of a virtual table column in a database.
 
     Never instantiated directly but is derived from actual columns, e.g. by accessing a field of a
-    :class:`.query.Subquery` object.
+    :class:`.subquery.Subquery` object.
 
     :param variable_name:   name, as a string, of the column as it is defined in the source
     :param view_name:       name of the view in which the column belongs.

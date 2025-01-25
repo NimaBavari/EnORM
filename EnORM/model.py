@@ -1,4 +1,4 @@
-"""Contains :class:`.model.Model`."""
+"""Contains :class:`.model.Model` and its helpers."""
 
 from __future__ import annotations
 

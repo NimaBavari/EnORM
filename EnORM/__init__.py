@@ -5,7 +5,7 @@ from .db_session import DBSession
 from .fkey import CASCADE, ForeignKey
 from .model import Model
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 __all__ = [
     "CASCADE",

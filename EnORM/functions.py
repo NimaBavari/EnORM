@@ -1,8 +1,9 @@
 """Contains ORM functions, both aggregate and non-aggregate ones."""
 
-from typing import Optional, Union
+from typing import Optional
 
 from .column import BaseColumn, Scalar
+from .custom_types import BaseColumnRef
 
 
 def agg(field: BaseColumn, name_in_sql: str) -> BaseColumn:
@@ -36,7 +37,7 @@ def max_(field: BaseColumn) -> BaseColumn:
     return agg(field, "MAX")
 
 
-def char_length(c: Union[BaseColumn, str]) -> Scalar:
+def char_length(c: BaseColumnRef) -> Scalar:
     """Describes the SQL function `CHAR_LENGTH`."""
     full_field_name = c
     if isinstance(c, BaseColumn):

@@ -51,11 +51,13 @@
   * [QueryFormatError](#exceptions.QueryFormatError)
   * [MultipleResultsFound](#exceptions.MultipleResultsFound)
   * [OrphanColumn](#exceptions.OrphanColumn)
+* [subquery](#subquery)
+  * [Subquery](#subquery.Subquery)
+* [custom\_types](#custom_types)
 * [query](#query)
   * [Record](#query.Record)
     * [is\_complete\_row](#query.Record.is_complete_row)
   * [QuerySet](#query.QuerySet)
-  * [Subquery](#query.Subquery)
   * [QueryBuilder](#query.QueryBuilder)
     * [add\_to\_data](#query.QueryBuilder.add_to_data)
     * [build](#query.QueryBuilder.build)
@@ -210,8 +212,8 @@ Abstraction of a real table column in a database.
 
 **Arguments**:
 
-- `type_`: type of value that this column expects. Must be one of the types defined in :module:`.types`
-- `length`: max length of the expected value. Only works with :class:`.types.String`. Optional
+- `type_`: type of value that this column expects. Must be one of the types defined in :module:`.backends`
+- `length`: max length of the expected value. Only works with :class:`.backends.String`. Optional
 - `rel`: marker of a relationship -- a foreign key. Optional
 - `primary_key`: keyword-only. Whether or not the column is a primary key. Optional
 - `default`: keyword-only. Default value for cells of the column to take. Optional
@@ -338,7 +340,7 @@ Describes the SQL aggregate function `MAX`.
 #### char\_length
 
 ```python
-def char_length(c: Union[BaseColumn, str]) -> Scalar
+def char_length(c: BaseColumnRef) -> Scalar
 ```
 
 Describes the SQL function `CHAR_LENGTH`.
@@ -663,11 +665,42 @@ class OrphanColumn(Fixed)
 
 Raised when a column is instantiated outside a model definition.
 
+<a id="subquery"></a>
+
+# subquery
+
+Contains :class:`.subquery.Subquery` and its helpers.
+
+<a id="subquery.Subquery"></a>
+
+## Subquery Objects
+
+```python
+class Subquery()
+```
+
+Representer of an SQL subquery.
+
+A subquery is a nested SELECT statement that is used within another SQL statement.
+
+Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
+
+**Arguments**:
+
+- `inner_sql`: SQL string of the view represented by the subquery
+- `column_names`: original names of the columns in that view.
+
+<a id="custom_types"></a>
+
+# custom\_types
+
+Contains definitions for frequently used composite types.
+
 <a id="query"></a>
 
 # query
 
-Contains :class:`.query.Query` and :class:`.query.Subquery`.
+Contains :class:`.query.Query` and its helpers.
 
 Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record`, and the class for
 any collection of them :class:`.query.QuerySet`.
@@ -720,25 +753,6 @@ NOTE that this is terminal: no any query methods can be applied to the instance 
 
 - `lst`: underlying list of records.
 
-<a id="query.Subquery"></a>
-
-## Subquery Objects
-
-```python
-class Subquery()
-```
-
-Representer of an SQL subquery.
-
-A subquery is a nested SELECT statement that is used within another SQL statement.
-
-Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
-
-**Arguments**:
-
-- `inner_sql`: SQL string of the view represented by the subquery
-- `column_names`: original names of the columns in that view.
-
 <a id="query.QueryBuilder"></a>
 
 ## QueryBuilder Objects
@@ -789,14 +803,17 @@ Gets as an argument:
 
 **Arguments**:
 
-- `entities`: -- which correspond to the "columns" of the matched results. May contain at most one `MappedClass` instance. NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
+- `entities`: -- which correspond to the "columns" of the matched results. May contain at most one `MappedClass`
+instance.
+
+NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
 
 <a id="query.Query.join"></a>
 
 #### join
 
 ```python
-def join(mapped: Union[Type, Subquery], *exprs: Any) -> Query
+def join(mapped: JoinEntity, *exprs: Any) -> Query
 ```
 
 Joins the mapped to the the current instance.
@@ -891,7 +908,7 @@ Any number of criteria may be specified as separated by a comma.
 #### group\_by
 
 ```python
-def group_by(*columns: Union[BaseColumn, str]) -> Query
+def group_by(*columns: BaseColumnRef) -> Query
 ```
 
 Adds SQL `GROUP BY` constraint on the current query with the given columns.
@@ -911,7 +928,7 @@ Adds SQL `HAVING` constraint on the current query with the given direct Python e
 #### order\_by
 
 ```python
-def order_by(*columns: Union[BaseColumn, str]) -> Query
+def order_by(*columns: BaseColumnRef) -> Query
 ```
 
 Adds SQL `ORDER BY` constraint on the current query with the given columns.
@@ -1071,7 +1088,7 @@ This will delete the user with the username "nbavari".
 
 # db\_session
 
-Contains :class:`.db_session.DBSession`.
+Contains :class:`.db_session.DBSession` and its helpers.
 
 <a id="db_session.TransactionManager"></a>
 
@@ -1170,7 +1187,7 @@ Used within repository pattern in :class:`.db_session.DBSession` to execute quer
 #### query
 
 ```python
-def query(*fields: Union[Type, BaseColumn]) -> Query
+def query(*fields: QueryEntity) -> Query
 ```
 
 Starts a query and returns the query object.
@@ -1238,7 +1255,7 @@ Implements a context manager for a more secure session. The following is an idio
 #### query
 
 ```python
-def query(*fields: Union[Type, BaseColumn]) -> Query
+def query(*fields: QueryEntity) -> Query
 ```
 
 Starts a query and returns the query object.
@@ -1267,7 +1284,7 @@ Persists all started queries.
 
 # model
 
-Contains :class:`.model.Model`.
+Contains :class:`.model.Model` and its helpers.
 
 <a id="model.SchemaDefinition"></a>
 
@@ -1424,7 +1441,7 @@ Contains basic datatypes.
 class Serial(Integer)
 ```
 
-ORM representation of serial types in SQL variants. Inherits from :class:`.types.Integer`.
+ORM representation of serial types in SQL variants. Inherits from :class:`.backends.Integer`.
 
 
 <a id="backends.oracle"></a>

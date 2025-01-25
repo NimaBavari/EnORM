@@ -124,7 +124,7 @@ class Binary(metaclass=BinaryMeta):
 
 
 class Serial(Integer):
-    """ORM representation of serial types in SQL variants. Inherits from :class:`.types.Integer`.
+    """ORM representation of serial types in SQL variants. Inherits from :class:`.backends.Integer`.
 
     :params val:    underlying integer value.
     """

@@ -1,14 +1,14 @@
-"""Contains :class:`.db_session.DBSession`."""
+"""Contains :class:`.db_session.DBSession` and its helpers."""
 
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Iterator, List, Optional, Type, Union
+from typing import Any, Iterator, List, Optional, Type
 
 import pyodbc
 
-from .column import BaseColumn
 from .constants import TYPES
+from .custom_types import QueryEntity
 from .db_engine import AbstractEngine
 from .exceptions import BackendSupportError
 from .model import Model
@@ -72,7 +72,7 @@ class QueryExecutor:
         self.engine = engine
         self.accumulator: List[Query] = []
 
-    def query(self, *fields: Union[Type, BaseColumn]) -> Query:
+    def query(self, *fields: QueryEntity) -> Query:
         """Starts a query and returns the query object."""
         query = Query(*fields)
         self.accumulator.append(query)
@@ -97,12 +97,12 @@ class SQLTypeResolver:
 
     def __init__(self, engine: AbstractEngine) -> None:
         self.engine = engine
-        if not self.engine.dialect in TYPES:
+        if self.engine.dialect not in TYPES:
             raise BackendSupportError("Unsupported dialect: '%s'." % self.engine.dialect)
 
     def get_native_type_name(self, type_name: str) -> str:
         """Resolves the native SQL type for the given type name."""
-        if not type_name in TYPES[self.engine.dialect]:
+        if type_name not in TYPES[self.engine.dialect]:
             raise BackendSupportError("%s not supports the type '%s'." % (self.engine.dialect, type_name))
 
         return TYPES[self.engine.dialect][type_name]
@@ -179,7 +179,7 @@ class DBSession:
     def __iter__(self) -> Iterator[Model]:
         yield from self.persistence_manager.queue
 
-    def query(self, *fields: Union[Type, BaseColumn]) -> Query:
+    def query(self, *fields: QueryEntity) -> Query:
         """Starts a query and returns the query object."""
         return self.query_executor.query(*fields)
 

@@ -1,4 +1,4 @@
-"""Contains :class:`.query.Query` and :class:`.query.Subquery`.
+"""Contains :class:`.query.Query` and its helpers.
 
 Also contains the class for complete and incomplete row-like objects, namely, :class:`.query.Record`, and the class for
 any collection of them :class:`.query.QuerySet`.
@@ -6,13 +6,15 @@ any collection of them :class:`.query.QuerySet`.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterator, List, Optional, Type, Union
+from typing import Any, Dict, Iterator, List, Optional
 
 import pyodbc
 
-from .column import BaseColumn, Column, VirtualField
+from .column import BaseColumn, Column
+from .custom_types import BaseColumnRef, JoinEntity, QueryEntity
 from .db_engine import AbstractEngine
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
+from .subquery import Subquery
 
 
 class Record:
@@ -94,36 +96,6 @@ class QuerySet:
 
     def __delslice__(self, start: int, stop: int) -> None:
         del self.lst[start:stop]
-
-
-class Subquery:
-    """Representer of an SQL subquery.
-
-    A subquery is a nested SELECT statement that is used within another SQL statement.
-
-    Never directly instantiated, but rather initialised by invoking :meth:`.query.Query.subquery()`.
-
-    :param inner_sql:       SQL string of the view represented by the subquery
-    :param column_names:    original names of the columns in that view.
-    """
-
-    subquery_idx = 0
-
-    def __init__(self, inner_sql: str, column_names: List[str]) -> None:
-        type(self).subquery_idx += 1
-        self.inner_sql = inner_sql
-        self.column_names = column_names
-        self.view_name = "anon_%d" % self.subquery_idx
-        self.full_sql = "(%s) AS %s" % (self.inner_sql, self.view_name)
-
-    def __str__(self) -> str:
-        return self.inner_sql
-
-    def __getattr__(self, attr: str) -> Any:
-        if attr not in self.column_names:
-            raise EntityError("Wrong field for subquery.")
-
-        return VirtualField(attr, self.view_name)
 
 
 class QueryBuilder:
@@ -224,10 +196,13 @@ class Query:
 
     Gets as an argument:
 
-    :param entities: -- which correspond to the "columns" of the matched results. May contain at most one `MappedClass` instance. NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
+    :param entities: -- which correspond to the "columns" of the matched results. May contain at most one `MappedClass`
+    instance.
+
+    NOTE that `MappedClass` is any subclass of :class:`.model.Model`.
     """
 
-    def __init__(self, *entities: Union[Type, BaseColumn]) -> None:
+    def __init__(self, *entities: QueryEntity) -> None:
         self.entities = entities
         self.builder = QueryBuilder()
         if not self.entities:
@@ -268,7 +243,7 @@ class Query:
         """
         return self.builder.build()
 
-    def join(self, mapped: Union[Type, Subquery], *exprs: Any) -> Query:
+    def join(self, mapped: JoinEntity, *exprs: Any) -> Query:
         """Joins the mapped to the the current instance.
 
         :param mapped:  joined entity
@@ -381,7 +356,7 @@ class Query:
         criteria = [eval("%s.%s == '%s'" % (model.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
-    def group_by(self, *columns: Union[BaseColumn, str]) -> Query:
+    def group_by(self, *columns: BaseColumnRef) -> Query:
         """Adds SQL `GROUP BY` constraint on the current query with the given columns."""
         column_names = [
             column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
@@ -396,7 +371,7 @@ class Query:
         self.builder.add_to_data("having", expr)
         return self
 
-    def order_by(self, *columns: Union[BaseColumn, str]) -> Query:
+    def order_by(self, *columns: BaseColumnRef) -> Query:
         """Adds SQL `ORDER BY` constraint on the current query with the given columns."""
         column_names = [
             column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
