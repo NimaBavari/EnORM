@@ -9,16 +9,11 @@ from .exceptions import IncompatibleArgument, OrphanColumn
 from .fkey import ForeignKey
 
 
-class BaseColumn:
-    """Base class for representing a column-like value in a database."""
-
-    aggs: List[str] = []
-
-    def __init__(self) -> None:
-        self.alias = None
+class ComparisonMixin:
+    """Mixin providing SQL comparison and query operations."""
 
     def binary_ops(self, other: Any, operator: str) -> str:
-        """String representation for direct Python binary operations between :class:`column.BaseColumn` objects.
+        """String representation for direct Python binary operations between :class:`column.BaseField` objects.
 
         E.g.::
 
@@ -31,10 +26,12 @@ class BaseColumn:
 
         Has the following:
 
-        :param other:       a literal or a :class:`column.BaseColumn` object, to compare with this object
+        :param other:       a literal or a :class:`column.BaseField` object, to compare with this object
         :param operator:    SQL operator, represented as a string.
         """
-        other_compound = "%s.%s" % (other.view_name, other.variable_name) if isinstance(other, BaseColumn) else other
+        other_compound = (
+            "%s.%s" % (other.view_name, other.variable_name) if hasattr(other, "compound_variable_name") else other
+        )
         full_field_name = ".".join(self.compound_variable_name.split(", "))
         return "%s %s %s" % (full_field_name, operator, other_compound)
 
@@ -67,7 +64,11 @@ class BaseColumn:
         flat_list_str = "(%s)" % flat_list
         return self.binary_ops(flat_list_str, "NOT IN")
 
-    def label(self, alias: str) -> BaseColumn:
+
+class AliasingMixin:
+    """Mixin providing column aliasing functionality."""
+
+    def label(self, alias: str) -> BaseField:
         """Returns the ORM representation for SQL column aliasing.
 
         :param alias:   alias as a string.
@@ -76,27 +77,46 @@ class BaseColumn:
         return self
 
 
-class Scalar(BaseColumn):
-    """Scalar value as a column.
-
-    :param repr_:   SQL representation of the scalar name.
-    """
-
-    def __init__(self, repr_) -> None:
-        super(Scalar, self).__init__()
-        self.compound_variable_name = repr_
-
-
-class Field(BaseColumn):
-    """Representer of all real and virtual fields."""
+class FieldIdentityMixin:
+    """Mixin providing field naming and compound variable name generation."""
 
     @property
-    def compound_variable_name(self):
-        return "%s, %s" % (self.view_name, self.variable_name)
+    def compound_variable_name(self) -> str:
+        """Abstract property for compound variable name generation."""
+        raise NotImplementedError("Subclasses must implement compound_variable_name")
 
 
-class Column(Field):
-    """Abstraction of a real table column in a database.
+class ModelAssociationMixin:
+    """Mixin handling model binding and orphan detection."""
+
+    objects: Dict[int, Dict[str, Any]] = {}
+
+    @property
+    def model(self) -> Type:
+        """Relational model that the column belongs to."""
+        try:
+            m = self.objects[id(self)]["model"]
+        except KeyError:
+            raise OrphanColumn
+        return m
+
+    @property
+    def variable_name(self) -> str:
+        """Name with which the column is defined."""
+        try:
+            v = self.objects[id(self)]["variable_name"]
+        except KeyError:
+            raise OrphanColumn
+        return v
+
+    @property
+    def view_name(self) -> str:
+        """Name of the SQL table that the column belongs to."""
+        return self.model.get_table_name()
+
+
+class ColumnDefinitionMixin:
+    """Mixin handling column definition, type validation, and constraint enforcement.
 
     :param type_:       type of value that this column expects. Must be one of the types defined in :module:`.backends`
     :param length:      max length of the expected value. Only works with :class:`.backends.String`. Optional
@@ -105,8 +125,6 @@ class Column(Field):
     :param default:     keyword-only. Default value for cells of the column to take. Optional
     :param nullable:    keyword-only. Whether or not the cells of the column are nullable. Optional.
     """
-
-    objects: Dict[int, Dict[str, Any]] = {}
 
     def __init__(
         self,
@@ -118,7 +136,6 @@ class Column(Field):
         default: Any = None,
         nullable: bool = True,
     ) -> None:
-        super(Column, self).__init__()
         self.type = type_
         self.length = length
         self.rel = rel
@@ -145,28 +162,37 @@ class Column(Field):
             if not isinstance(self.length, int):
                 raise IncompatibleArgument("%s type should have an integer length." % self.type)
 
-    @property
-    def model(self) -> Type:
-        """Relational model that the column belongs to."""
-        try:
-            m = self.objects[id(self)]["model"]
-        except KeyError:
-            raise OrphanColumn
-        return m
+
+class BaseField(ComparisonMixin, AliasingMixin, FieldIdentityMixin):
+    """Base class for representing a field-like value in a database."""
+
+    aggs: List[str] = []
+
+
+class Scalar(BaseField):
+    """Scalar value as a column.
+
+    :param repr_:   SQL representation of the scalar name.
+    """
+
+    def __init__(self, repr_: str) -> None:
+        self._compound_variable_name = repr_
 
     @property
-    def variable_name(self) -> str:
-        """Name with which the column is defined."""
-        try:
-            v = self.objects[id(self)]["variable_name"]
-        except KeyError:
-            raise OrphanColumn
-        return v
+    def compound_variable_name(self) -> str:
+        return self._compound_variable_name
+
+
+class Field(BaseField):
+    """Representer of all real and virtual fields."""
 
     @property
-    def view_name(self) -> str:
-        """Name of the SQL table that the column belongs to."""
-        return self.model.get_table_name()
+    def compound_variable_name(self) -> str:
+        return "%s, %s" % (self.view_name, self.variable_name)
+
+
+class Column(Field, ModelAssociationMixin, ColumnDefinitionMixin):
+    """Abstraction of a real table column in a database."""
 
 
 class VirtualField(Field):
@@ -180,6 +206,13 @@ class VirtualField(Field):
     """
 
     def __init__(self, variable_name: str, view_name: str) -> None:
-        super(VirtualField, self).__init__()
-        self.variable_name = variable_name
-        self.view_name = view_name
+        self._variable_name = variable_name
+        self._view_name = view_name
+
+    @property
+    def variable_name(self) -> str:
+        return self._variable_name
+
+    @property
+    def view_name(self) -> str:
+        return self._view_name

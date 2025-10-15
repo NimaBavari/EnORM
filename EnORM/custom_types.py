@@ -2,9 +2,9 @@
 
 from typing import Type, TypeAlias
 
-from .column import BaseColumn
+from .column import BaseField
 from .subquery import Subquery
 
-QueryEntity: TypeAlias = Type | BaseColumn
-BaseColumnRef: TypeAlias = BaseColumn | str
+QueryEntity: TypeAlias = Type | BaseField
+BaseFieldRef: TypeAlias = BaseField | str
 JoinEntity: TypeAlias = Type | Subquery

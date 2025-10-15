@@ -10,8 +10,8 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import pyodbc
 
-from .column import BaseColumn, Column
-from .custom_types import BaseColumnRef, JoinEntity, QueryEntity
+from .column import BaseField, Column
+from .custom_types import BaseFieldRef, JoinEntity, QueryEntity
 from .db_engine import AbstractEngine
 from .exceptions import EntityError, FieldNotExist, MethodChainingError, MultipleResultsFound, QueryFormatError
 from .subquery import Subquery
@@ -219,8 +219,8 @@ class Query:
                 self.builder.add_to_data("from", table_name)
                 if item.alias is not None:
                     self.builder.add_to_data("from_as", item.alias)
-            elif isinstance(item, BaseColumn):
-                if item.alias is not None:
+            elif isinstance(item, BaseField):
+                if hasattr(item, "alias") and item.alias is not None:
                     comp_name = ", ".join([item.compound_variable_name, item.alias, *item.aggs])
                     item.aggs = []
                     self.builder.add_to_data("select", comp_name)
@@ -356,10 +356,10 @@ class Query:
         criteria = [eval("%s.%s == '%s'" % (model.__name__, key, val)) for key, val in kwcrts.items()]
         return self.filter(*criteria)
 
-    def group_by(self, *columns: BaseColumnRef) -> Query:
+    def group_by(self, *columns: BaseFieldRef) -> Query:
         """Adds SQL `GROUP BY` constraint on the current query with the given columns."""
         column_names = [
-            column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
+            column.compound_variable_name if isinstance(column, BaseField) else column for column in columns
         ]
         if column_names:
             self.builder.data["group_by"] = column_names
@@ -371,10 +371,10 @@ class Query:
         self.builder.add_to_data("having", expr)
         return self
 
-    def order_by(self, *columns: BaseColumnRef) -> Query:
+    def order_by(self, *columns: BaseFieldRef) -> Query:
         """Adds SQL `ORDER BY` constraint on the current query with the given columns."""
         column_names = [
-            column.compound_variable_name if isinstance(column, BaseColumn) else column for column in columns
+            column.compound_variable_name if isinstance(column, BaseField) else column for column in columns
         ]
         if column_names:
             self.builder.data["order_by"] = column_names

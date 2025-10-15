@@ -1,15 +1,21 @@
 # Table of Contents
 
 * [column](#column)
-  * [BaseColumn](#column.BaseColumn)
-    * [binary\_ops](#column.BaseColumn.binary_ops)
-    * [label](#column.BaseColumn.label)
+  * [ComparisonMixin](#column.ComparisonMixin)
+    * [binary\_ops](#column.ComparisonMixin.binary_ops)
+  * [AliasingMixin](#column.AliasingMixin)
+    * [label](#column.AliasingMixin.label)
+  * [FieldIdentityMixin](#column.FieldIdentityMixin)
+    * [compound\_variable\_name](#column.FieldIdentityMixin.compound_variable_name)
+  * [ModelAssociationMixin](#column.ModelAssociationMixin)
+    * [model](#column.ModelAssociationMixin.model)
+    * [variable\_name](#column.ModelAssociationMixin.variable_name)
+    * [view\_name](#column.ModelAssociationMixin.view_name)
+  * [ColumnDefinitionMixin](#column.ColumnDefinitionMixin)
+  * [BaseField](#column.BaseField)
   * [Scalar](#column.Scalar)
   * [Field](#column.Field)
   * [Column](#column.Column)
-    * [model](#column.Column.model)
-    * [variable\_name](#column.Column.variable_name)
-    * [view\_name](#column.Column.view_name)
   * [VirtualField](#column.VirtualField)
 * [functions](#functions)
   * [agg](#functions.agg)
@@ -126,17 +132,17 @@
 
 Contains column-like classes.
 
-<a id="column.BaseColumn"></a>
+<a id="column.ComparisonMixin"></a>
 
-## BaseColumn Objects
+## ComparisonMixin Objects
 
 ```python
-class BaseColumn()
+class ComparisonMixin()
 ```
 
-Base class for representing a column-like value in a database.
+Mixin providing SQL comparison and query operations.
 
-<a id="column.BaseColumn.binary_ops"></a>
+<a id="column.ComparisonMixin.binary_ops"></a>
 
 #### binary\_ops
 
@@ -144,7 +150,7 @@ Base class for representing a column-like value in a database.
 def binary_ops(other: Any, operator: str) -> str
 ```
 
-String representation for direct Python binary operations between :class:`column.BaseColumn` objects.
+String representation for direct Python binary operations between :class:`column.BaseField` objects.
 
 E.g.::
 
@@ -159,15 +165,25 @@ Has the following:
 
 **Arguments**:
 
-- `other`: a literal or a :class:`column.BaseColumn` object, to compare with this object
+- `other`: a literal or a :class:`column.BaseField` object, to compare with this object
 - `operator`: SQL operator, represented as a string.
 
-<a id="column.BaseColumn.label"></a>
+<a id="column.AliasingMixin"></a>
+
+## AliasingMixin Objects
+
+```python
+class AliasingMixin()
+```
+
+Mixin providing column aliasing functionality.
+
+<a id="column.AliasingMixin.label"></a>
 
 #### label
 
 ```python
-def label(alias: str) -> BaseColumn
+def label(alias: str) -> BaseField
 ```
 
 Returns the ORM representation for SQL column aliasing.
@@ -176,12 +192,105 @@ Returns the ORM representation for SQL column aliasing.
 
 - `alias`: alias as a string.
 
+<a id="column.FieldIdentityMixin"></a>
+
+## FieldIdentityMixin Objects
+
+```python
+class FieldIdentityMixin()
+```
+
+Mixin providing field naming and compound variable name generation.
+
+<a id="column.FieldIdentityMixin.compound_variable_name"></a>
+
+#### compound\_variable\_name
+
+```python
+@property
+def compound_variable_name() -> str
+```
+
+Abstract property for compound variable name generation.
+
+<a id="column.ModelAssociationMixin"></a>
+
+## ModelAssociationMixin Objects
+
+```python
+class ModelAssociationMixin()
+```
+
+Mixin handling model binding and orphan detection.
+
+<a id="column.ModelAssociationMixin.model"></a>
+
+#### model
+
+```python
+@property
+def model() -> Type
+```
+
+Relational model that the column belongs to.
+
+<a id="column.ModelAssociationMixin.variable_name"></a>
+
+#### variable\_name
+
+```python
+@property
+def variable_name() -> str
+```
+
+Name with which the column is defined.
+
+<a id="column.ModelAssociationMixin.view_name"></a>
+
+#### view\_name
+
+```python
+@property
+def view_name() -> str
+```
+
+Name of the SQL table that the column belongs to.
+
+<a id="column.ColumnDefinitionMixin"></a>
+
+## ColumnDefinitionMixin Objects
+
+```python
+class ColumnDefinitionMixin()
+```
+
+Mixin handling column definition, type validation, and constraint enforcement.
+
+**Arguments**:
+
+- `type_`: type of value that this column expects. Must be one of the types defined in :module:`.backends`
+- `length`: max length of the expected value. Only works with :class:`.backends.String`. Optional
+- `rel`: marker of a relationship -- a foreign key. Optional
+- `primary_key`: keyword-only. Whether or not the column is a primary key. Optional
+- `default`: keyword-only. Default value for cells of the column to take. Optional
+- `nullable`: keyword-only. Whether or not the cells of the column are nullable. Optional.
+
+<a id="column.BaseField"></a>
+
+## BaseField Objects
+
+```python
+class BaseField(ComparisonMixin, AliasingMixin, FieldIdentityMixin)
+```
+
+Base class for representing a field-like value in a database.
+
 <a id="column.Scalar"></a>
 
 ## Scalar Objects
 
 ```python
-class Scalar(BaseColumn)
+class Scalar(BaseField)
 ```
 
 Scalar value as a column.
@@ -195,7 +304,7 @@ Scalar value as a column.
 ## Field Objects
 
 ```python
-class Field(BaseColumn)
+class Field(BaseField)
 ```
 
 Representer of all real and virtual fields.
@@ -205,52 +314,10 @@ Representer of all real and virtual fields.
 ## Column Objects
 
 ```python
-class Column(Field)
+class Column(Field, ModelAssociationMixin, ColumnDefinitionMixin)
 ```
 
 Abstraction of a real table column in a database.
-
-**Arguments**:
-
-- `type_`: type of value that this column expects. Must be one of the types defined in :module:`.backends`
-- `length`: max length of the expected value. Only works with :class:`.backends.String`. Optional
-- `rel`: marker of a relationship -- a foreign key. Optional
-- `primary_key`: keyword-only. Whether or not the column is a primary key. Optional
-- `default`: keyword-only. Default value for cells of the column to take. Optional
-- `nullable`: keyword-only. Whether or not the cells of the column are nullable. Optional.
-
-<a id="column.Column.model"></a>
-
-#### model
-
-```python
-@property
-def model() -> Type
-```
-
-Relational model that the column belongs to.
-
-<a id="column.Column.variable_name"></a>
-
-#### variable\_name
-
-```python
-@property
-def variable_name() -> str
-```
-
-Name with which the column is defined.
-
-<a id="column.Column.view_name"></a>
-
-#### view\_name
-
-```python
-@property
-def view_name() -> str
-```
-
-Name of the SQL table that the column belongs to.
 
 <a id="column.VirtualField"></a>
 
@@ -280,7 +347,7 @@ Contains ORM functions, both aggregate and non-aggregate ones.
 #### agg
 
 ```python
-def agg(field: BaseColumn, name_in_sql: str) -> BaseColumn
+def agg(field: BaseField, name_in_sql: str) -> BaseField
 ```
 
 Describes the basis for all aggregate functions.
@@ -290,7 +357,7 @@ Describes the basis for all aggregate functions.
 #### count
 
 ```python
-def count(field: BaseColumn) -> BaseColumn
+def count(field: BaseField) -> BaseField
 ```
 
 Describes the SQL aggregate function `COUNT`.
@@ -300,7 +367,7 @@ Describes the SQL aggregate function `COUNT`.
 #### sum\_
 
 ```python
-def sum_(field: BaseColumn) -> BaseColumn
+def sum_(field: BaseField) -> BaseField
 ```
 
 Describes the SQL aggregate function `SUM`.
@@ -310,7 +377,7 @@ Describes the SQL aggregate function `SUM`.
 #### avg
 
 ```python
-def avg(field: BaseColumn) -> BaseColumn
+def avg(field: BaseField) -> BaseField
 ```
 
 Describes the SQL aggregate function `AVG`.
@@ -320,7 +387,7 @@ Describes the SQL aggregate function `AVG`.
 #### min\_
 
 ```python
-def min_(field: BaseColumn) -> BaseColumn
+def min_(field: BaseField) -> BaseField
 ```
 
 Describes the SQL aggregate function `MIN`.
@@ -330,7 +397,7 @@ Describes the SQL aggregate function `MIN`.
 #### max\_
 
 ```python
-def max_(field: BaseColumn) -> BaseColumn
+def max_(field: BaseField) -> BaseField
 ```
 
 Describes the SQL aggregate function `MAX`.
@@ -340,7 +407,7 @@ Describes the SQL aggregate function `MAX`.
 #### char\_length
 
 ```python
-def char_length(c: BaseColumnRef) -> Scalar
+def char_length(c: BaseFieldRef) -> Scalar
 ```
 
 Describes the SQL function `CHAR_LENGTH`.
@@ -908,7 +975,7 @@ Any number of criteria may be specified as separated by a comma.
 #### group\_by
 
 ```python
-def group_by(*columns: BaseColumnRef) -> Query
+def group_by(*columns: BaseFieldRef) -> Query
 ```
 
 Adds SQL `GROUP BY` constraint on the current query with the given columns.
@@ -928,7 +995,7 @@ Adds SQL `HAVING` constraint on the current query with the given direct Python e
 #### order\_by
 
 ```python
-def order_by(*columns: BaseColumnRef) -> Query
+def order_by(*columns: BaseFieldRef) -> Query
 ```
 
 Adds SQL `ORDER BY` constraint on the current query with the given columns.

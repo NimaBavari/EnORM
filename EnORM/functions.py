@@ -2,45 +2,45 @@
 
 from typing import Optional
 
-from .column import BaseColumn, Scalar
-from .custom_types import BaseColumnRef
+from .column import BaseField, Scalar
+from .custom_types import BaseFieldRef
 
 
-def agg(field: BaseColumn, name_in_sql: str) -> BaseColumn:
+def agg(field: BaseField, name_in_sql: str) -> BaseField:
     """Describes the basis for all aggregate functions."""
     field.aggs.append(name_in_sql)
     return field
 
 
-def count(field: BaseColumn) -> BaseColumn:
+def count(field: BaseField) -> BaseField:
     """Describes the SQL aggregate function `COUNT`."""
     return agg(field, "COUNT")
 
 
-def sum_(field: BaseColumn) -> BaseColumn:
+def sum_(field: BaseField) -> BaseField:
     """Describes the SQL aggregate function `SUM`."""
     return agg(field, "SUM")
 
 
-def avg(field: BaseColumn) -> BaseColumn:
+def avg(field: BaseField) -> BaseField:
     """Describes the SQL aggregate function `AVG`."""
     return agg(field, "AVG")
 
 
-def min_(field: BaseColumn) -> BaseColumn:
+def min_(field: BaseField) -> BaseField:
     """Describes the SQL aggregate function `MIN`."""
     return agg(field, "MIN")
 
 
-def max_(field: BaseColumn) -> BaseColumn:
+def max_(field: BaseField) -> BaseField:
     """Describes the SQL aggregate function `MAX`."""
     return agg(field, "MAX")
 
 
-def char_length(c: BaseColumnRef) -> Scalar:
+def char_length(c: BaseFieldRef) -> Scalar:
     """Describes the SQL function `CHAR_LENGTH`."""
     full_field_name = c
-    if isinstance(c, BaseColumn):
+    if isinstance(c, BaseField):
         full_field_name = ".".join(c.compound_variable_name.split(", "))
     return Scalar("CHAR_LENGTH(%s)" % full_field_name)
 
